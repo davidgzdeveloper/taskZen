@@ -6,7 +6,7 @@ import { CreateTaskDialog } from "./CreateTaskDialog";
 import { Button } from "../ui/button";
 import { Sparkles, Loader2 } from "lucide-react";
 import { runPrioritizeTasks } from "@/lib/actions";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Task } from "@/lib/types";
 import { DragDropContext } from "react-beautiful-dnd";
@@ -92,6 +92,7 @@ export const KanbanBoard = () => {
   if (!enabled) {
     return null;
   }
+  
   return (
     <React.StrictMode>
       <KanbanBoardContent />
