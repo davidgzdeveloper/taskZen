@@ -76,7 +76,7 @@ const KanbanBoardContent = () => {
   );
 }
 
-// Wrapper component to disable strict mode for react-beautiful-dnd
+// Wrapper component to deal with react-beautiful-dnd incompatibility with React 18 strict mode
 export const KanbanBoard = () => {
   const [enabled, setEnabled] = useState(false);
 
@@ -93,9 +93,5 @@ export const KanbanBoard = () => {
     return null;
   }
   
-  return (
-    <React.StrictMode>
-      <KanbanBoardContent />
-    </React.StrictMode>
-  )
+  return <KanbanBoardContent />
 }
