@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useState, ReactNode, useEffect } from 'react';
-import { User, BoardState, Task, TaskPriority } from '@/lib/types';
+import { User, BoardState, Task, TaskPriority, ColumnId } from '@/lib/types';
 import { mockUser, mockBoard } from '@/lib/mock-data';
 
 interface AppContextType {
@@ -14,6 +14,7 @@ interface AppContextType {
   addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'userId' | 'columnOrder' | 'status' | 'completedPomodoros'>) => void;
   updateTask: (task: Task) => void;
   updateTasks: (tasks: Task[]) => void;
+  handleDragEnd: (result: any) => void;
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -130,9 +131,85 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  const handleDragEnd = (result: any) => {
+    const { destination, source, draggableId } = result;
+
+    if (!destination) {
+      return;
+    }
+
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
+      return;
+    }
+
+    const start = board.columns[source.droppableId as ColumnId];
+    const finish = board.columns[destination.droppableId as ColumnId];
+    const draggedTask = board.tasks[draggableId];
+
+    if (start === finish) {
+      const newTaskIds = Array.from(start.taskIds);
+      newTaskIds.splice(source.index, 1);
+      newTaskIds.splice(destination.index, 0, draggableId);
+
+      const newColumn = {
+        ...start,
+        taskIds: newTaskIds,
+      };
+
+      const newState = {
+        ...board,
+        columns: {
+          ...board.columns,
+          [newColumn.id]: newColumn,
+        },
+      };
+      setBoard(newState);
+      return;
+    }
+
+    // Moving from one list to another
+    const startTaskIds = Array.from(start.taskIds);
+    startTaskIds.splice(source.index, 1);
+    const newStart = {
+      ...start,
+      taskIds: startTaskIds,
+    };
+
+    const finishTaskIds = Array.from(finish.taskIds);
+    finishTaskIds.splice(destination.index, 0, draggableId);
+    const newFinish = {
+      ...finish,
+      taskIds: finishTaskIds,
+    };
+    
+    const newTasks = {
+        ...board.tasks,
+        [draggableId]: {
+            ...draggedTask,
+            status: destination.droppableId,
+            updatedAt: new Date(),
+            ...(destination.droppableId === 'done' && { completedAt: new Date() })
+        }
+    }
+
+    const newState = {
+      ...board,
+      tasks: newTasks,
+      columns: {
+        ...board.columns,
+        [newStart.id]: newStart,
+        [newFinish.id]: newFinish,
+      },
+    };
+    setBoard(newState);
+  };
+
 
   return (
-    <AppContext.Provider value={{ user, board, isAuthenticated, isLoading, login, logout, addTask, updateTask, updateTasks }}>
+    <AppContext.Provider value={{ user, board, isAuthenticated, isLoading, login, logout, addTask, updateTask, updateTasks, handleDragEnd }}>
       {children}
     </AppContext.Provider>
   );
