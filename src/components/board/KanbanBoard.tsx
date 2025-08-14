@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAppContext } from "@/hooks/useAppContext";
@@ -10,13 +11,17 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Task } from "@/lib/types";
 import { DragDropContext } from "react-beautiful-dnd";
-import React from "react";
+import type { DropResult } from "react-beautiful-dnd";
 
 const KanbanBoardContent = () => {
   const { board, updateTasks, handleDragEnd } = useAppContext();
   const [isOptimizing, setIsOptimizing] = useState(false);
   const { toast } = useToast();
 
+  const onDragEnd = (result: DropResult) => {
+    handleDragEnd(result);
+  };
+  
   const handleOptimize = async () => {
     setIsOptimizing(true);
     const tasksToPrioritize = board.columns.todo.taskIds.map(id => board.tasks[id]);
@@ -40,7 +45,7 @@ const KanbanBoardContent = () => {
   };
 
   return (
-    <DragDropContext onDragEnd={handleDragEnd}>
+    <DragDropContext onDragEnd={onDragEnd}>
         <div className="flex flex-col h-full">
         <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold">Kanban Board</h1>
@@ -78,18 +83,13 @@ const KanbanBoardContent = () => {
 
 // Wrapper component to deal with react-beautiful-dnd incompatibility with React 18 strict mode
 export const KanbanBoard = () => {
-  const [enabled, setEnabled] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    const animation = requestAnimationFrame(() => setEnabled(true));
-
-    return () => {
-      cancelAnimationFrame(animation);
-      setEnabled(false);
-    };
+    setIsMounted(true);
   }, []);
 
-  if (!enabled) {
+  if (!isMounted) {
     return null;
   }
   
