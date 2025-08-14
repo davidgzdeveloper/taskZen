@@ -10,8 +10,9 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Task } from "@/lib/types";
 import { DragDropContext } from "react-beautiful-dnd";
+import React from "react";
 
-export function KanbanBoard() {
+const KanbanBoardContent = () => {
   const { board, updateTasks, handleDragEnd } = useAppContext();
   const [isOptimizing, setIsOptimizing] = useState(false);
   const { toast } = useToast();
@@ -73,4 +74,27 @@ export function KanbanBoard() {
         </div>
     </DragDropContext>
   );
+}
+
+// Wrapper component to disable strict mode for react-beautiful-dnd
+export const KanbanBoard = () => {
+  const [enabled, setEnabled] = useState(false);
+
+  useEffect(() => {
+    const animation = requestAnimationFrame(() => setEnabled(true));
+
+    return () => {
+      cancelAnimationFrame(animation);
+      setEnabled(false);
+    };
+  }, []);
+
+  if (!enabled) {
+    return null;
+  }
+  return (
+    <React.StrictMode>
+      <KanbanBoardContent />
+    </React.StrictMode>
+  )
 }
