@@ -3,13 +3,21 @@
 import { Column, Task } from "@/lib/types";
 import { TaskCard } from "./TaskCard";
 import { Droppable } from "react-beautiful-dnd";
+import { useEffect, useState } from "react";
 
-interface KanbanColumnProps {
-  column: Column;
-  tasks: Task[];
-}
+// This is a workaround for react-beautiful-dnd's incompatibility with React 18 Strict Mode.
+const ClientSideDroppable = ({ children, droppableId }: { children: React.ReactNode, droppableId: string }) => {
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+  if (!isMounted) return null;
 
-export function KanbanColumn({ column, tasks }: KanbanColumnProps) {
+  return <Droppable droppableId={droppableId}>{children}</Droppable>;
+};
+
+
+export function KanbanColumn({ column, tasks }: { column: Column; tasks: Task[] }) {
   return (
     <div className="w-full md:w-80 lg:w-96 flex-shrink-0">
       <div className="flex items-center justify-between mb-4">
@@ -20,7 +28,7 @@ export function KanbanColumn({ column, tasks }: KanbanColumnProps) {
           </span>
         </h2>
       </div>
-      <Droppable droppableId={column.id}>
+      <ClientSideDroppable droppableId={column.id}>
         {(provided, snapshot) => (
           <div
             ref={provided.innerRef}
@@ -37,7 +45,7 @@ export function KanbanColumn({ column, tasks }: KanbanColumnProps) {
             {provided.placeholder}
           </div>
         )}
-      </Droppable>
+      </ClientSideDroppable>
     </div>
   );
 }

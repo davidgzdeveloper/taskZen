@@ -7,13 +7,13 @@ import { CreateTaskDialog } from "./CreateTaskDialog";
 import { Button } from "../ui/button";
 import { Sparkles, Loader2 } from "lucide-react";
 import { runPrioritizeTasks } from "@/lib/actions";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Task } from "@/lib/types";
 import { DragDropContext } from "react-beautiful-dnd";
 import type { DropResult } from "react-beautiful-dnd";
 
-const KanbanBoardContent = () => {
+export const KanbanBoard = () => {
   const { board, updateTasks, handleDragEnd } = useAppContext();
   const [isOptimizing, setIsOptimizing] = useState(false);
   const { toast } = useToast();
@@ -79,19 +79,4 @@ const KanbanBoardContent = () => {
         </div>
     </DragDropContext>
   );
-}
-
-// Wrapper component to deal with react-beautiful-dnd incompatibility with React 18 strict mode
-export const KanbanBoard = () => {
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  if (!isMounted) {
-    return null;
-  }
-  
-  return <KanbanBoardContent />
 }
