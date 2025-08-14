@@ -10,16 +10,23 @@ import { runPrioritizeTasks } from "@/lib/actions";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Task } from "@/lib/types";
-import { DragDropContext } from "react-beautiful-dnd";
-import type { DropResult } from "react-beautiful-dnd";
+import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 
 export const KanbanBoard = () => {
   const { board, updateTasks, handleDragEnd } = useAppContext();
   const [isOptimizing, setIsOptimizing] = useState(false);
   const { toast } = useToast();
 
-  const onDragEnd = (result: DropResult) => {
-    handleDragEnd(result);
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  const onDragEnd = (event: DragEndEvent) => {
+    handleDragEnd(event);
   };
   
   const handleOptimize = async () => {
@@ -45,7 +52,7 @@ export const KanbanBoard = () => {
   };
 
   return (
-    <DragDropContext onDragEnd={onDragEnd}>
+    <DndContext onDragEnd={onDragEnd} sensors={sensors}>
         <div className="flex flex-col h-full">
         <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold">Kanban Board</h1>
@@ -77,6 +84,6 @@ export const KanbanBoard = () => {
             </div>
         </div>
         </div>
-    </DragDropContext>
+    </DndContext>
   );
 }

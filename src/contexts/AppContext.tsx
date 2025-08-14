@@ -1,8 +1,11 @@
+
 "use client";
 
 import React, { createContext, useState, ReactNode, useEffect } from 'react';
 import { User, BoardState, Task, TaskPriority, ColumnId } from '@/lib/types';
 import { mockUser, mockBoard } from '@/lib/mock-data';
+import { DragEndEvent } from '@dnd-kit/core';
+import { arrayMove } from '@dnd-kit/sortable';
 
 interface AppContextType {
   user: User | null;
@@ -14,7 +17,7 @@ interface AppContextType {
   addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'userId' | 'columnOrder' | 'status' | 'completedPomodoros'>) => void;
   updateTask: (task: Task) => void;
   updateTasks: (tasks: Task[]) => void;
-  handleDragEnd: (result: any) => void;
+  handleDragEnd: (event: DragEndEvent) => void;
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -131,80 +134,87 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const handleDragEnd = (result: any) => {
-    const { destination, source, draggableId } = result;
-
-    if (!destination) {
-      return;
-    }
-
-    if (
-      destination.droppableId === source.droppableId &&
-      destination.index === source.index
-    ) {
-      return;
-    }
-
-    const start = board.columns[source.droppableId as ColumnId];
-    const finish = board.columns[destination.droppableId as ColumnId];
-    const draggedTask = board.tasks[draggableId];
-
-    if (start === finish) {
-      const newTaskIds = Array.from(start.taskIds);
-      newTaskIds.splice(source.index, 1);
-      newTaskIds.splice(destination.index, 0, draggableId);
-
-      const newColumn = {
-        ...start,
-        taskIds: newTaskIds,
-      };
-
-      const newState = {
-        ...board,
-        columns: {
-          ...board.columns,
-          [newColumn.id]: newColumn,
-        },
-      };
-      setBoard(newState);
-      return;
-    }
-
-    // Moving from one list to another
-    const startTaskIds = Array.from(start.taskIds);
-    startTaskIds.splice(source.index, 1);
-    const newStart = {
-      ...start,
-      taskIds: startTaskIds,
-    };
-
-    const finishTaskIds = Array.from(finish.taskIds);
-    finishTaskIds.splice(destination.index, 0, draggableId);
-    const newFinish = {
-      ...finish,
-      taskIds: finishTaskIds,
-    };
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over) return;
     
-    const newTasks = {
-        ...board.tasks,
-        [draggableId]: {
-            ...draggedTask,
-            status: destination.droppableId,
-            updatedAt: new Date(),
-            ...(destination.droppableId === 'done' && { completedAt: new Date() })
-        }
-    }
+    const activeId = active.id as string;
+    const overId = over.id as string;
 
-    const newState = {
-      ...board,
-      tasks: newTasks,
-      columns: {
-        ...board.columns,
-        [newStart.id]: newStart,
-        [newFinish.id]: newFinish,
-      },
-    };
-    setBoard(newState);
+    const activeTask = board.tasks[activeId];
+    if (!activeTask) return;
+
+    const startColumnId = activeTask.status;
+    // over.id can be a column id or a task id
+    const endColumnId = (board.columns[overId] ? overId : board.tasks[overId]?.status) as ColumnId;
+
+    if (!startColumnId || !endColumnId) return;
+
+    if (startColumnId === endColumnId) {
+      // Reordering within the same column
+      const column = board.columns[startColumnId];
+      const oldIndex = column.taskIds.indexOf(activeId);
+      const newIndex = column.taskIds.indexOf(overId);
+
+      if (oldIndex !== newIndex) {
+        setBoard(prev => ({
+          ...prev,
+          columns: {
+            ...prev.columns,
+            [startColumnId]: {
+              ...column,
+              taskIds: arrayMove(column.taskIds, oldIndex, newIndex),
+            },
+          },
+        }));
+      }
+    } else {
+      // Moving to a different column
+      const startColumn = board.columns[startColumnId];
+      const endColumn = board.columns[endColumnId];
+
+      const startTaskIds = startColumn.taskIds.filter(id => id !== activeId);
+      
+      const overIsAColumn = board.columns[overId];
+      const newEndTaskIds = [...endColumn.taskIds];
+      
+      if (overIsAColumn) {
+        // Dropped on a column
+        newEndTaskIds.push(activeId);
+      } else {
+        // Dropped on a task
+        const overIndex = endColumn.taskIds.indexOf(overId);
+        newEndTaskIds.splice(overIndex, 0, activeId);
+      }
+      
+      setBoard(prev => {
+        const newTasks = {
+            ...prev.tasks,
+            [activeId]: {
+                ...prev.tasks[activeId],
+                status: endColumnId,
+                updatedAt: new Date(),
+                ...(endColumnId === 'done' && { completedAt: new Date() })
+            }
+        };
+
+        return {
+          ...prev,
+          tasks: newTasks,
+          columns: {
+            ...prev.columns,
+            [startColumnId]: {
+              ...startColumn,
+              taskIds: startTaskIds
+            },
+            [endColumnId]: {
+              ...endColumn,
+              taskIds: newEndTaskIds
+            }
+          }
+        }
+      })
+    }
   };
 
 
