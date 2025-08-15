@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -7,28 +8,46 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useAppContext } from "@/hooks/useAppContext";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export function SettingsForm() {
-    const { user } = useAppContext();
+    const { user, updateUserPreferences, theme, setTheme } = useAppContext();
     const { toast } = useToast();
 
     const [workDuration, setWorkDuration] = useState(user?.preferences.pomodoroWork || 25);
     const [breakDuration, setBreakDuration] = useState(user?.preferences.pomodoroBreak || 5);
     const [notifications, setNotifications] = useState(user?.preferences.notifications || true);
-    // In a real app, theme would be handled by a theme context
-    const [theme, setTheme] = useState(user?.preferences.theme || 'light');
+    
+    useEffect(() => {
+        if (user) {
+            setWorkDuration(user.preferences.pomodoroWork);
+            setBreakDuration(user.preferences.pomodoroBreak);
+            setNotifications(user.preferences.notifications);
+        }
+    }, [user]);
+
+    const handleThemeChange = (checked: boolean) => {
+        const newTheme = checked ? 'dark' : 'light';
+        setTheme(newTheme);
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        // In a real app, you would call a function from context to update user preferences in Firestore.
-        // For this mock, we'll just show a toast.
-        console.log({ workDuration, breakDuration, notifications, theme });
+        updateUserPreferences({
+            pomodoroWork: workDuration,
+            pomodoroBreak: breakDuration,
+            notifications,
+            theme,
+        });
         toast({
             title: "Settings Saved",
             description: "Your preferences have been updated.",
         });
     };
+
+    if (!user) {
+        return null;
+    }
 
     return (
         <Card className="max-w-2xl mx-auto">
@@ -91,7 +110,7 @@ export function SettingsForm() {
                             <Switch 
                                 id="theme"
                                 checked={theme === 'dark'}
-                                onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+                                onCheckedChange={handleThemeChange}
                             />
                         </div>
                     </div>

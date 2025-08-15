@@ -2,7 +2,7 @@
 "use client";
 
 import React, { createContext, useState, ReactNode, useEffect } from 'react';
-import { User, BoardState, Task, TaskPriority, ColumnId } from '@/lib/types';
+import { User, BoardState, Task, TaskPriority, ColumnId, UserPreferences } from '@/lib/types';
 import { mockUser, mockBoard } from '@/lib/mock-data';
 import { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
@@ -12,6 +12,9 @@ interface AppContextType {
   board: BoardState;
   isAuthenticated: boolean;
   isLoading: boolean;
+  theme: 'light' | 'dark';
+  setTheme: (theme: 'light' | 'dark') => void;
+  updateUserPreferences: (preferences: Partial<UserPreferences>) => void;
   login: (email: string, pass: string) => Promise<void>;
   logout: () => void;
   addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'userId' | 'columnOrder' | 'status' | 'completedPomodoros'>) => void;
@@ -27,16 +30,48 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [board, setBoard] = useState<BoardState>(mockBoard);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [theme, setThemeState] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
-    // Simulate checking auth status on mount
     const authStatus = localStorage.getItem('isAuthenticated');
+    const storedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+
     if (authStatus === 'true') {
       setUser(mockUser);
       setIsAuthenticated(true);
     }
+    
+    if (storedTheme) {
+      setTheme(storedTheme);
+    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      setTheme('dark');
+    }
+
     setIsLoading(false);
   }, []);
+
+  const setTheme = (newTheme: 'light' | 'dark') => {
+    setThemeState(newTheme);
+    localStorage.setItem('theme', newTheme);
+    document.documentElement.classList.remove('light', 'dark');
+    document.documentElement.classList.add(newTheme);
+    if(user) {
+        updateUserPreferences({ theme: newTheme });
+    }
+  };
+  
+  const updateUserPreferences = (preferences: Partial<UserPreferences>) => {
+    if (user) {
+      const newUser = {
+        ...user,
+        preferences: {
+          ...user.preferences,
+          ...preferences,
+        },
+      };
+      setUser(newUser);
+    }
+  };
 
   const login = async (email: string, pass: string) => {
     console.log('Logging in with', email, pass);
@@ -219,7 +254,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
 
   return (
-    <AppContext.Provider value={{ user, board, isAuthenticated, isLoading, login, logout, addTask, updateTask, updateTasks, handleDragEnd }}>
+    <AppContext.Provider value={{ user, board, isAuthenticated, isLoading, login, logout, addTask, updateTask, updateTasks, handleDragEnd, theme, setTheme, updateUserPreferences }}>
       {children}
     </AppContext.Provider>
   );

@@ -1,15 +1,11 @@
+
 export interface User {
   uid: string;
   email: string | null;
   displayName: string | null;
   photoURL?: string;
   createdAt: Date;
-  preferences: {
-    pomodoroWork: number;
-    pomodoroBreak: number;
-    theme: 'light' | 'dark';
-    notifications: boolean;
-  };
+  preferences: UserPreferences;
   stats: {
     totalScore: number;
     tasksCompleted: number;
@@ -18,6 +14,13 @@ export interface User {
     bestStreak: number;
     lastActiveDate: Date;
   };
+}
+
+export interface UserPreferences {
+    pomodoroWork: number;
+    pomodoroBreak: number;
+    theme: 'light' | 'dark';
+    notifications: boolean;
 }
 
 export type TaskStatus = 'todo' | 'inprogress' | 'done';
