@@ -15,7 +15,7 @@ import {
   SidebarTrigger,
   SidebarInset,
 } from "@/components/ui/sidebar";
-import { useAppContext } from "@/hooks/useAppContext";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   LayoutDashboard,
   Trello,
@@ -39,17 +39,17 @@ export default function MainLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isAuthenticated, isLoading, user } = useAppContext();
+  const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!loading && !user) {
       router.push("/login");
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [user, loading, router]);
 
-  if (isLoading || !isAuthenticated) {
+  if (loading || !user) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -94,7 +94,7 @@ export default function MainLayout({
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-                <p className="text-sm font-semibold text-accent-foreground">{user?.stats.totalScore.toLocaleString()} pts</p>
+                <p className="text-sm font-semibold text-accent-foreground">0 pts</p>
             </div>
             <UserNav />
           </div>

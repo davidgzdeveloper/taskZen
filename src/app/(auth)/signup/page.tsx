@@ -5,11 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { useAppContext } from "@/hooks/useAppContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import React, { FormEvent, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 function GoogleIcon() {
   return (
@@ -24,28 +25,43 @@ function GoogleIcon() {
 }
 
 export default function SignupPage() {
-  const { login, isAuthenticated, isLoading: isAuthLoading } = useAppContext();
+  const { signUp, user, loading } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (user && !loading) {
       router.push('/dashboard');
     }
-  }, [isAuthenticated, router]);
+  }, [user, loading, router]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // In a real app, you would have a separate signup function.
-    // For this mock, we'll just log in the user.
-    await login(email, password);
+    
+    const { error } = await signUp(email, password, fullName);
+    
+    if (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Account created successfully! Please check your email to verify your account.",
+      });
+      router.push('/login');
+    }
+    
     setIsLoading(false);
   };
   
-  const totalLoading = isLoading || isAuthLoading;
+  const totalLoading = isLoading || loading;
 
   return (
     <Card className="mx-auto w-full max-w-sm">
@@ -58,6 +74,18 @@ export default function SignupPage() {
       <CardContent>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="fullName">Full Name</Label>
+              <Input
+                id="fullName"
+                type="text"
+                placeholder="John Doe"
+                required
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                disabled={totalLoading}
+              />
+            </div>
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
               <Input

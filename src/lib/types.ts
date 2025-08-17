@@ -1,77 +1,80 @@
-
+// Base types for our simplified schema
 export interface User {
-  uid: string;
-  email: string | null;
-  displayName: string | null;
-  photoURL?: string;
-  createdAt: Date;
-  preferences: UserPreferences;
-  stats: {
-    totalScore: number;
-    tasksCompleted: number;
-    pomodorosCompleted: number;
-    currentStreak: number;
-    bestStreak: number;
-    lastActiveDate: Date;
-  };
+  id: string
+  email: string
+  password: string
+  fullName: string | null
+  avatarUrl: string | null
+  createdAt: Date
+  updatedAt: Date
 }
-
-export interface UserPreferences {
-    pomodoroWork: number;
-    pomodoroBreak: number;
-    theme: 'light' | 'dark';
-    notifications: boolean;
-}
-
-export type TaskStatus = 'todo' | 'inprogress' | 'done';
-export type TaskPriority = 'high' | 'medium' | 'low';
 
 export interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  status: TaskStatus;
-  priority: TaskPriority;
-  columnOrder: number;
-  estimatedPomodoros: number;
-  completedPomodoros: number;
-  createdAt: Date;
-  updatedAt: Date;
-  completedAt?: Date;
-  userId: string;
+  id: string
+  title: string
+  description: string | null
+  status: 'TODO' | 'IN_PROGRESS' | 'DONE'
+  priority: 'LOW' | 'MEDIUM' | 'HIGH'
+  dueDate: Date | null
+  createdAt: Date
+  updatedAt: Date
+  userId: string
 }
 
-export interface PomodoroSession {
-  id: string;
-  taskId?: string;
-  taskTitle?: string;
-  type: 'work' | 'break';
-  duration: number; // in seconds
-  startedAt: Date;
-  completedAt?: Date;
-  wasInterrupted: boolean;
-  userId: string;
+// Extended types for API responses
+export type UserWithTasks = User & {
+  tasks: Task[]
 }
 
-export interface DailyStats {
-  date: string; // 'YYYY-MM-DD'
-  tasksCompleted: number;
-  pomodorosCompleted: number;
-  totalFocusMinutes: number;
-  score: number;
-  userId: string;
+export type TaskWithUser = Task & {
+  user: User
 }
 
-export type ColumnId = TaskStatus;
-
-export interface Column {
-  id: ColumnId;
-  title: string;
-  taskIds: string[];
+// API request types
+export interface CreateTaskRequest {
+  title: string
+  description?: string
+  status?: 'TODO' | 'IN_PROGRESS' | 'DONE'
+  priority?: 'LOW' | 'MEDIUM' | 'HIGH'
+  dueDate?: string
 }
 
-export interface BoardState {
-  tasks: Record<string, Task>;
-  columns: Record<ColumnId, Column>;
-  columnOrder: ColumnId[];
+export interface UpdateTaskRequest {
+  title?: string
+  description?: string
+  status?: 'TODO' | 'IN_PROGRESS' | 'DONE'
+  priority?: 'LOW' | 'MEDIUM' | 'HIGH'
+  dueDate?: string
+}
+
+export interface CreateProfileRequest {
+  fullName?: string
+  avatarUrl?: string
+}
+
+export interface UpdateProfileRequest {
+  fullName?: string
+  avatarUrl?: string
+}
+
+// Dashboard types
+export interface DashboardStats {
+  totalTasks: number
+  completedTasks: number
+  pendingTasks: number
+  inProgressTasks: number
+  totalScore: number
+}
+
+export interface TaskStats {
+  byStatus: {
+    todo: number
+    inProgress: number
+    done: number
+  }
+  byPriority: {
+    low: number
+    medium: number
+    high: number
+  }
 }

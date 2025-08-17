@@ -5,11 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { useAppContext } from "@/hooks/useAppContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import React, { FormEvent, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 function GoogleIcon() {
   return (
@@ -24,26 +25,42 @@ function GoogleIcon() {
 }
 
 export default function LoginPage() {
-  const { login, isAuthenticated, isLoading: isAuthLoading } = useAppContext();
+  const { signIn, user, loading } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (user && !loading) {
       router.push('/dashboard');
     }
-  }, [isAuthenticated, router]);
+  }, [user, loading, router]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    await login(email, password);
+    
+    const { error } = await signIn(email, password);
+    
+    if (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Logged in successfully!",
+      });
+      router.push('/dashboard');
+    }
+    
     setIsLoading(false);
   };
 
-  const totalLoading = isLoading || isAuthLoading;
+  const totalLoading = isLoading || loading;
 
   return (
     <Card className="mx-auto w-full max-w-sm">
