@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     // Sign up user
     const result = await AuthService.signUp(email, password, fullName)
 
-    if (result.error) {
+    if ('error' in result) {
       return NextResponse.json(
         { error: result.error },
         { status: 400 }

@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     // Sign in user
     const result = await AuthService.signIn(email, password)
 
-    if (result.error) {
+    if ('error' in result) {
       return NextResponse.json(
         { error: result.error },
         { status: 401 }

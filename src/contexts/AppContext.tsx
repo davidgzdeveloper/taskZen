@@ -2,8 +2,6 @@
 
 import React, { createContext, useState, ReactNode } from 'react';
 import { BoardState, Task, TaskPriority, ColumnId } from '@/lib/types';
-import { DragEndEvent } from '@dnd-kit/core';
-import { arrayMove } from '@dnd-kit/sortable';
 
 // Define the new, simplified context type
 interface AppContextType {
@@ -11,7 +9,7 @@ interface AppContextType {
   addTask: (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'userId' | 'columnOrder' | 'status' | 'completedPomodoros'>, userId: string) => void;
   updateTask: (task: Task) => void;
   updateTasks: (tasks: Task[]) => void;
-  handleDragEnd: (event: DragEndEvent) => void;
+  // handleDragEnd has been removed as it was using a non-existent dependency
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -29,6 +27,7 @@ const initialBoard: BoardState = {
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [board, setBoard] = useState<BoardState>(initialBoard);
 
+  // Note: This addTask function is client-side only and does not persist to the database.
   const addTask = (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'userId' | 'columnOrder' | 'status'| 'completedPomodoros'>, userId: string) => {
     const newTaskId = `task-${Date.now()}`;
     const newTask: Task = {
@@ -36,7 +35,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         id: newTaskId,
         createdAt: new Date(),
         updatedAt: new Date(),
-        userId: userId, // Use the provided userId
+        userId: userId,
         status: 'todo',
         columnOrder: board.columns.todo.taskIds.length,
         completedPomodoros: 0,
@@ -106,77 +105,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over) return;
-    
-    const activeId = active.id as string;
-    const overId = over.id as string;
-
-    const activeTask = board.tasks[activeId];
-    if (!activeTask) return;
-
-    const startColumnId = activeTask.status;
-    const endColumnId = (board.columns[overId] ? overId : board.tasks[overId]?.status) as ColumnId;
-
-    if (!startColumnId || !endColumnId) return;
-
-    if (startColumnId === endColumnId) {
-      const column = board.columns[startColumnId];
-      const oldIndex = column.taskIds.indexOf(activeId);
-      const newIndex = column.taskIds.indexOf(overId);
-
-      if (oldIndex !== newIndex) {
-        setBoard(prev => ({
-          ...prev,
-          columns: {
-            ...prev.columns,
-            [startColumnId]: {
-              ...column,
-              taskIds: arrayMove(column.taskIds, oldIndex, newIndex),
-            },
-          },
-        }));
-      }
-    } else {
-      const startColumn = board.columns[startColumnId];
-      const endColumn = board.columns[endColumnId];
-      const startTaskIds = startColumn.taskIds.filter(id => id !== activeId);
-      const newEndTaskIds = [...endColumn.taskIds];
-      
-      if (board.columns[overId]) {
-        newEndTaskIds.push(activeId);
-      } else {
-        const overIndex = endColumn.taskIds.indexOf(overId);
-        newEndTaskIds.splice(overIndex, 0, activeId);
-      }
-      
-      setBoard(prev => {
-        const newTasks = {
-            ...prev.tasks,
-            [activeId]: {
-                ...prev.tasks[activeId],
-                status: endColumnId,
-                updatedAt: new Date(),
-                ...(endColumnId === 'done' && { completedAt: new Date() })
-            }
-        };
-
-        return {
-          ...prev,
-          tasks: newTasks,
-          columns: {
-            ...prev.columns,
-            [startColumnId]: { ...startColumn, taskIds: startTaskIds },
-            [endColumnId]: { ...endColumn, taskIds: newEndTaskIds }
-          }
-        }
-      })
-    }
-  };
-
   return (
-    <AppContext.Provider value={{ board, addTask, updateTask, updateTasks, handleDragEnd }}>
+    <AppContext.Provider value={{ board, addTask, updateTask, updateTasks }}>
       {children}
     </AppContext.Provider>
   );

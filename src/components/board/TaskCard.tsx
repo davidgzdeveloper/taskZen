@@ -56,33 +56,34 @@ export function TaskCard({ task, columnId, isMobile = false }: TaskCardProps) {
   const titleSize = isMobile ? "text-sm" : "text-base";
   const descriptionMargin = isMobile ? "mb-2" : "mb-3";
 
-  // Mobile task movement functions
+  const moveTask = async (targetColumn: string) => {
+    try {
+      const response = await fetch(`/api/tasks/${task.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: targetColumn }),
+      });
+      if (!response.ok) throw new Error('Failed to move task');
+      toast({ title: "Task Moved" });
+      // Reload to reflect changes across the app
+      window.location.reload();
+    } catch (error) {
+      toast({ title: "Move Failed", variant: "destructive" });
+    }
+  };
+
   const moveTaskLeft = () => {
     let targetColumn = '';
     if (columnId === 'in-progress') targetColumn = 'todo';
     else if (columnId === 'done') targetColumn = 'in-progress';
-    
-    if (targetColumn) {
-      const mockEvent = {
-        active: { id: task.id },
-        over: { id: targetColumn }
-      };
-      handleDragEnd(mockEvent);
-    }
+    if (targetColumn) moveTask(targetColumn);
   };
 
   const moveTaskRight = () => {
     let targetColumn = '';
     if (columnId === 'todo') targetColumn = 'in-progress';
     else if (columnId === 'in-progress') targetColumn = 'done';
-    
-    if (targetColumn) {
-      const mockEvent = {
-        active: { id: task.id },
-        over: { id: targetColumn }
-      };
-      handleDragEnd(mockEvent);
-    }
+    if (targetColumn) moveTask(targetColumn);
   };
 
   // Helper functions for mobile buttons

@@ -19,30 +19,49 @@ export const KanbanBoard = () => {
 
   useEffect(() => {
     const cleanup = monitorForElements({
-      onDrop({ source, location }) {
+      onDrop: async ({ source, location }) => {
         const destination = location.current.dropTargets[0];
-        if (!destination) {
-          return;
-        }
+        if (!destination) return;
 
-        const taskId = source.data?.taskId;
-        const destinationColumnId = destination.data?.columnId;
+        const taskId = source.data.taskId as string;
+        const destinationColumnId = destination.data.columnId as ColumnId;
         
-        if (!taskId || !destinationColumnId) {
-          return;
-        }
+        if (!taskId || !destinationColumnId) return;
+        
+        const task = board.tasks[taskId];
+        if (task && task.status === destinationColumnId) return; // No change
 
-        const mockEvent = {
-          active: { id: taskId },
-          over: { id: destinationColumnId }
-        };
-        
-        handleDragEnd(mockEvent);
+        // Persist change to backend
+        try {
+            const response = await fetch(`/api/tasks/${taskId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: destinationColumnId }),
+            });
+
+            if (!response.ok) throw new Error('Failed to update task');
+            
+            const updatedTask = await response.json();
+
+            // Update local state to reflect the change
+            updateTasks([updatedTask]);
+
+            toast({
+                title: "Task Updated",
+                description: "Task moved to the new column.",
+            });
+        } catch (error) {
+            toast({
+                title: "Update Failed",
+                description: "Could not move the task.",
+                variant: "destructive",
+            });
+        }
       }
     });
 
     return cleanup;
-  }, [handleDragEnd]);
+  }, [board, updateTasks, toast]);
   
   const handleOptimize = async () => {
     setIsOptimizing(true);
