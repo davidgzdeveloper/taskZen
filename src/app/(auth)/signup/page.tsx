@@ -42,20 +42,28 @@ export default function SignupPage() {
     e.preventDefault();
     setIsLoading(true);
     
-    const { error } = await signUp(email, password, fullName);
-    
-    if (error) {
+    try {
+      const result = await signUp(email, password, fullName);
+      
+      if (result.error) {
+        toast({
+          title: "Error",
+          description: result.error,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Account created successfully! Welcome to TaskZen!",
+        });
+        router.push('/dashboard');
+      }
+    } catch (err) {
       toast({
         title: "Error",
-        description: error.message,
+        description: "An unexpected error occurred during signup",
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Success",
-        description: "Account created successfully! Please check your email to verify your account.",
-      });
-      router.push('/login');
     }
     
     setIsLoading(false);
