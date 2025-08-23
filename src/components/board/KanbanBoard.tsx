@@ -7,27 +7,42 @@ import { CreateTaskDialog } from "./CreateTaskDialog";
 import { Button } from "../ui/button";
 import { Sparkles, Loader2 } from "lucide-react";
 import { runPrioritizeTasks } from "@/lib/actions";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Task } from "@/lib/types";
-import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 
 export const KanbanBoard = () => {
   const { board, updateTasks, handleDragEnd } = useAppContext();
   const [isOptimizing, setIsOptimizing] = useState(false);
   const { toast } = useToast();
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    })
-  );
+  useEffect(() => {
+    const cleanup = monitorForElements({
+      onDrop({ source, location }) {
+        const destination = location.current.dropTargets[0];
+        if (!destination) {
+          return;
+        }
 
-  const onDragEnd = (event: DragEndEvent) => {
-    handleDragEnd(event);
-  };
+        const taskId = source.data?.taskId;
+        const destinationColumnId = destination.data?.columnId;
+        
+        if (!taskId || !destinationColumnId) {
+          return;
+        }
+
+        const mockEvent = {
+          active: { id: taskId },
+          over: { id: destinationColumnId }
+        };
+        
+        handleDragEnd(mockEvent);
+      }
+    });
+
+    return cleanup;
+  }, [handleDragEnd]);
   
   const handleOptimize = async () => {
     setIsOptimizing(true);
@@ -52,38 +67,36 @@ export const KanbanBoard = () => {
   };
 
   return (
-    <DndContext onDragEnd={onDragEnd} sensors={sensors}>
-        <div className="flex flex-col h-full">
-        <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold">Kanban Board</h1>
-            <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={handleOptimize} disabled={isOptimizing}>
-                    {isOptimizing ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                        <Sparkles className="mr-2 h-4 w-4" />
-                    )}
-                    Optimize with AI
-                </Button>
-                <CreateTaskDialog />
-            </div>
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Kanban Board</h1>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleOptimize} disabled={isOptimizing}>
+            {isOptimizing ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="mr-2 h-4 w-4" />
+            )}
+            Optimize with AI
+          </Button>
+          <CreateTaskDialog />
         </div>
-        <div className="flex-1 overflow-x-auto">
-            <div className="flex gap-6 pb-4">
-            {board.columnOrder.map(columnId => {
-                const column = board.columns[columnId];
-                const tasks = column.taskIds.map(taskId => board.tasks[taskId]);
-                return (
-                <KanbanColumn
-                    key={column.id}
-                    column={column}
-                    tasks={tasks as Task[]}
-                />
-                );
-            })}
-            </div>
+      </div>
+      <div className="flex-1 overflow-x-auto">
+        <div className="flex gap-6 pb-4">
+          {board.columnOrder.map(columnId => {
+            const column = board.columns[columnId];
+            const tasks = column.taskIds.map(taskId => board.tasks[taskId]);
+            return (
+              <KanbanColumn
+                key={column.id}
+                column={column}
+                tasks={tasks as Task[]}
+              />
+            );
+          })}
         </div>
-        </div>
-    </DndContext>
+      </div>
+    </div>
   );
 }

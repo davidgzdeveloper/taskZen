@@ -1,4 +1,9 @@
 // Base types for our simplified schema
+export interface UserStats {
+  currentStreak: number;
+  totalScore: number;
+}
+
 export interface User {
   id: string
   email: string
@@ -7,18 +12,52 @@ export interface User {
   avatarUrl: string | null
   createdAt: Date
   updatedAt: Date
+  preferences: UserPreferences
+  stats: UserStats
 }
+
+export type TaskPriority = 'low' | 'medium' | 'high';
+
+export type ColumnId = 'todo' | 'in-progress' | 'done';
 
 export interface Task {
   id: string
   title: string
   description: string | null
-  status: 'TODO' | 'IN_PROGRESS' | 'DONE'
-  priority: 'LOW' | 'MEDIUM' | 'HIGH'
+  status: ColumnId
+  priority: TaskPriority
   dueDate: Date | null
   createdAt: Date
   updatedAt: Date
   userId: string
+  columnOrder: number
+  completedPomodoros: number
+  completedAt?: Date
+}
+
+export interface Column {
+    id: ColumnId;
+    title: string;
+    taskIds: string[];
+}
+  
+export interface BoardState {
+    tasks: { [key: string]: Task };
+    columns: { [key: string]: Column };
+    columnOrder: ColumnId[];
+}
+  
+export interface UserPreferences {
+    theme: 'light' | 'dark';
+}
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  fullName: string | null;
+  avatarUrl: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // Extended types for API responses
@@ -34,16 +73,16 @@ export type TaskWithUser = Task & {
 export interface CreateTaskRequest {
   title: string
   description?: string
-  status?: 'TODO' | 'IN_PROGRESS' | 'DONE'
-  priority?: 'LOW' | 'MEDIUM' | 'HIGH'
+  status?: ColumnId
+  priority?: TaskPriority
   dueDate?: string
 }
 
 export interface UpdateTaskRequest {
   title?: string
   description?: string
-  status?: 'TODO' | 'IN_PROGRESS' | 'DONE'
-  priority?: 'LOW' | 'MEDIUM' | 'HIGH'
+  status?: ColumnId
+  priority?: TaskPriority
   dueDate?: string
 }
 

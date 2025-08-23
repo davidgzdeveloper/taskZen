@@ -6,47 +6,70 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { useAppContext } from "@/hooks/useAppContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 
 export function SettingsForm() {
-    const { user, updateUserPreferences, theme, setTheme } = useAppContext();
+    const { user, updateUserPreferences } = useAuth();
     const { toast } = useToast();
 
-    const [workDuration, setWorkDuration] = useState(user?.preferences.pomodoroWork || 25);
-    const [breakDuration, setBreakDuration] = useState(user?.preferences.pomodoroBreak || 5);
-    const [notifications, setNotifications] = useState(user?.preferences.notifications || true);
+    const [pomodoroWork, setPomodoroWork] = useState(25);
+    const [pomodoroBreak, setPomodoroBreak] = useState(5);
+    const [notifications, setNotifications] = useState(true);
+    const [theme, setTheme] = useState<'light' | 'dark'>('light');
+    const [isLoading, setIsLoading] = useState(false);
     
     useEffect(() => {
-        if (user) {
-            setWorkDuration(user.preferences.pomodoroWork);
-            setBreakDuration(user.preferences.pomodoroBreak);
+        if (user && user.preferences) {
+            setPomodoroWork(user.preferences.pomodoroWork);
+            setPomodoroBreak(user.preferences.pomodoroBreak);
             setNotifications(user.preferences.notifications);
+            setTheme(user.preferences.theme === 'DARK' ? 'dark' : 'light');
         }
     }, [user]);
 
     const handleThemeChange = (checked: boolean) => {
         const newTheme = checked ? 'dark' : 'light';
         setTheme(newTheme);
+        // Optional: apply theme immediately to the UI
+        document.documentElement.classList.remove('light', 'dark');
+        document.documentElement.classList.add(newTheme);
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        updateUserPreferences({
-            pomodoroWork: workDuration,
-            pomodoroBreak: breakDuration,
+        setIsLoading(true);
+        const { error } = await updateUserPreferences({
+            pomodoroWork,
+            pomodoroBreak,
             notifications,
-            theme,
+            theme: theme.toUpperCase() as 'LIGHT' | 'DARK',
         });
-        toast({
-            title: "Settings Saved",
-            description: "Your preferences have been updated.",
-        });
+        setIsLoading(false);
+
+        if (error) {
+            toast({
+                title: "Error",
+                description: "Failed to save settings. Please try again.",
+                variant: "destructive",
+            });
+        } else {
+            toast({
+                title: "Settings Saved",
+                description: "Your preferences have been updated.",
+            });
+        }
     };
 
     if (!user) {
-        return null;
+        // You can show a loader here while user data is being fetched
+        return (
+            <div className="flex justify-center items-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+        );
     }
 
     return (
@@ -65,10 +88,11 @@ export function SettingsForm() {
                                 <Input 
                                     id="work-duration" 
                                     type="number" 
-                                    value={workDuration}
-                                    onChange={e => setWorkDuration(Number(e.target.value))}
+                                    value={pomodoroWork}
+                                    onChange={e => setPomodoroWork(Number(e.target.value))}
                                     min="5"
                                     max="60"
+                                    disabled={isLoading}
                                 />
                             </div>
                             <div className="space-y-2">
@@ -76,10 +100,11 @@ export function SettingsForm() {
                                 <Input 
                                     id="break-duration" 
                                     type="number"
-                                    value={breakDuration}
-                                    onChange={e => setBreakDuration(Number(e.target.value))}
+                                    value={pomodoroBreak}
+                                    onChange={e => setPomodoroBreak(Number(e.target.value))}
                                     min="1"
                                     max="30"
+                                    disabled={isLoading}
                                 />
                             </div>
                         </div>
@@ -98,6 +123,7 @@ export function SettingsForm() {
                                 id="notifications"
                                 checked={notifications}
                                 onCheckedChange={setNotifications}
+                                disabled={isLoading}
                             />
                         </div>
                          <div className="flex items-center justify-between rounded-lg border p-4">
@@ -111,12 +137,16 @@ export function SettingsForm() {
                                 id="theme"
                                 checked={theme === 'dark'}
                                 onCheckedChange={handleThemeChange}
+                                disabled={isLoading}
                             />
                         </div>
                     </div>
 
                     <div className="flex justify-end">
-                        <Button type="submit">Save Changes</Button>
+                        <Button type="submit" disabled={isLoading}>
+                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Save Changes
+                        </Button>
                     </div>
                 </form>
             </CardContent>

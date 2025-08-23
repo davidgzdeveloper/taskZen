@@ -3,16 +3,35 @@
 
 import { Column, Task } from "@/lib/types";
 import { TaskCard } from "./TaskCard";
-import { useDroppable } from "@dnd-kit/core";
-import { SortableContext } from "@dnd-kit/sortable";
-import { useMemo } from "react";
+import { useRef, useEffect, useState } from "react";
+import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 
 export function KanbanColumn({ column, tasks }: { column: Column; tasks: Task[] }) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: column.id,
-  });
+  const ref = useRef<HTMLDivElement>(null);
+  const [isDraggedOver, setIsDraggedOver] = useState(false);
 
-  const taskIds = useMemo(() => tasks.map(t => t.id), [tasks]);
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
+    const cleanup = dropTargetForElements({
+      element,
+      getData() {
+        return { columnId: column.id };
+      },
+      onDragEnter() {
+        setIsDraggedOver(true);
+      },
+      onDragLeave() {
+        setIsDraggedOver(false);
+      },
+      onDrop() {
+        setIsDraggedOver(false);
+      },
+    });
+
+    return cleanup;
+  }, [column.id]);
 
   return (
     <div className="w-full md:w-80 lg:w-96 flex-shrink-0">
@@ -24,20 +43,18 @@ export function KanbanColumn({ column, tasks }: { column: Column; tasks: Task[] 
           </span>
         </h2>
       </div>
-      <SortableContext items={taskIds}>
-        <div
-          ref={setNodeRef}
-          className={`bg-muted/50 rounded-lg p-2 min-h-[400px] transition-colors ${isOver ? 'bg-accent/20' : ''}`}
-        >
-          {tasks.length > 0 ? (
-            tasks.map((task) => <TaskCard key={task.id} task={task} />)
-          ) : (
-            <div className="flex items-center justify-center h-40 border-2 border-dashed border-muted-foreground/20 rounded-lg">
-              <p className="text-sm text-muted-foreground">Drop tasks here</p>
-            </div>
-          )}
-        </div>
-      </SortableContext>
+      <div
+        ref={ref}
+        className={`bg-muted/50 rounded-lg p-4 min-h-[400px] transition-colors ${isDraggedOver ? 'bg-accent/20 border-2 border-primary border-dashed' : ''}`}
+      >
+        {tasks.length > 0 ? (
+          tasks.map((task) => <TaskCard key={task.id} task={task} columnId={column.id} />)
+        ) : (
+          <div className="flex items-center justify-center h-40 border-2 border-dashed border-muted-foreground/20 rounded-lg">
+            <p className="text-sm text-muted-foreground">Drop tasks here</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

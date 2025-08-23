@@ -1,13 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { TaskService } from '@/lib/services/taskService'
+import { AuthService } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   try {
-    // Get user from middleware headers
-    const userId = request.headers.get('x-user-id')
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Get token from Authorization header
+    const authHeader = request.headers.get('authorization')
+    const token = authHeader?.replace('Bearer ', '')
+
+    if (!token) {
+      return NextResponse.json({ error: 'No token provided' }, { status: 401 })
     }
+
+    const user = await AuthService.getUserFromToken(token)
+    if (!user) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
+    const userId = user.id
 
     const stats = await TaskService.getTaskStats(userId)
     return NextResponse.json(stats)

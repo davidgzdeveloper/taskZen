@@ -54,6 +54,7 @@ export default function LoginPage() {
         title: "Success",
         description: "Logged in successfully!",
       });
+      console.log(user);
       router.push('/dashboard');
     }
     

@@ -109,3 +109,4 @@ All API endpoints require authentication via Supabase. The system automatically:
 - [Prisma Documentation](https://www.prisma.io/docs)
 - [Supabase Documentation](https://supabase.com/docs)
 - [Next.js API Routes](https://nextjs.org/docs/api-routes/introduction)
+

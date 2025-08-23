@@ -1,50 +1,44 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { AuthService } from './lib/auth'
+import { AuthService } from '@/lib/auth';
 
-export function middleware(request: NextRequest) {
-  // Only apply to API routes
-  if (!request.nextUrl.pathname.startsWith('/api/')) {
-    return NextResponse.next()
+export async function middleware(request: NextRequest) {
+  const token = request.cookies.get('token')?.value;
+  const { pathname } = request.nextUrl;
+
+  // Normalize pathname to remove trailing slash for consistent matching
+  const normalizedPathname = pathname.endsWith('/') && pathname.length > 1 ? pathname.slice(0, -1) : pathname;
+
+  const isAuthenticated = token ? await AuthService.verifyToken(token) : null;
+
+  const publicPaths = ['/login', '/signup'];
+  const isPublicPath = publicPaths.includes(normalizedPathname);
+
+  // If the user is authenticated and tries to access a public path (login/signup),
+  // redirect them to the dashboard.
+  if (isAuthenticated && isPublicPath) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
-  // Skip auth for auth routes
-  if (request.nextUrl.pathname.startsWith('/api/auth/')) {
-    return NextResponse.next()
+  // If the user is not authenticated and tries to access a private path,
+  // redirect them to the login page.
+  if (!isAuthenticated && !isPublicPath) {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // Get token from Authorization header
-  const authHeader = request.headers.get('authorization')
-  const token = authHeader?.replace('Bearer ', '')
-
-  if (!token) {
-    return NextResponse.json(
-      { error: 'No token provided' },
-      { status: 401 }
-    )
-  }
-
-  // Verify token
-  const payload = AuthService.verifyToken(token)
-  if (!payload) {
-    return NextResponse.json(
-      { error: 'Invalid token' },
-      { status: 401 }
-    )
-  }
-
-  // Add user info to headers for API routes to use
-  const requestHeaders = new Headers(request.headers)
-  requestHeaders.set('x-user-id', payload.userId)
-  requestHeaders.set('x-user-email', payload.email)
-
-  return NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
-  })
+  // Otherwise, allow the request to proceed.
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: '/api/:path*',
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+  ],
 }

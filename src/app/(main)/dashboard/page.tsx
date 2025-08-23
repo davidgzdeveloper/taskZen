@@ -5,20 +5,81 @@ import { PriorityPieChart } from "@/components/dashboard/PriorityPieChart";
 import { RecentTasks } from "@/components/dashboard/RecentTasks";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { useAppContext } from "@/hooks/useAppContext";
-import { mockDailyStats } from "@/lib/mock-data";
-import { Task } from "@/lib/types";
+import { useAuth } from "@/contexts/AuthContext";
+import { Task, DashboardStats } from "@/lib/types";
 import { CheckCircle2, Target, Trophy, Clock } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { format, isToday, parseISO } from 'date-fns';
 
 export default function DashboardPage() {
-  const { user, board } = useAppContext();
+  const { board } = useAppContext();
+  const { user, session } = useAuth();
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  
   const tasks = useMemo(() => Object.values(board.tasks), [board.tasks]);
+  
+  // Load dashboard stats from API
+  useEffect(() => {
+    const loadDashboardStats = async () => {
+      if (!session) return;
+      
+      try {
+        const response = await fetch('/api/dashboard/stats', {
+          headers: { 'Authorization': `Bearer ${session.token}` }
+        });
+        
+        if (response.ok) {
+          const stats = await response.json();
+          setDashboardStats(stats);
+        }
+      } catch (error) {
+        console.error('Failed to load dashboard stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDashboardStats();
+  }, [session, tasks.length]); // Re-load when number of tasks changes
   
   if (!user) return null;
 
-  const todayStats = {
-    tasksCompleted: mockDailyStats.slice(-1)[0]?.tasksCompleted || 0,
-    pomodorosCompleted: mockDailyStats.slice(-1)[0]?.pomodorosCompleted || 0,
+  const todayStats = useMemo(() => {
+    const completedToday = tasks.filter(task => 
+      task.completedAt && isToday(new Date(task.completedAt))
+    );
+    return {
+      tasksCompleted: completedToday.length,
+      pomodorosCompleted: completedToday.reduce((acc, task) => acc + (task.completedPomodoros || 0), 0),
+    };
+  }, [tasks]);
+
+  const activityData = useMemo(() => {
+    const activityMap: { [key: string]: { date: string; tasksCompleted: number; pomodorosCompleted: number } } = {};
+    tasks.forEach(task => {
+      if (task.completedAt) {
+        const date = format(new Date(task.completedAt), 'yyyy-MM-dd');
+        if (!activityMap[date]) {
+          activityMap[date] = { date, tasksCompleted: 0, pomodorosCompleted: 0 };
+        }
+        activityMap[date].tasksCompleted += 1;
+        activityMap[date].pomodorosCompleted += task.completedPomodoros || 0;
+      }
+    });
+    return Object.values(activityMap).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [tasks]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-24 bg-muted animate-pulse rounded-lg"></div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -35,18 +96,32 @@ export default function DashboardPage() {
           icon={<Clock className="h-4 w-4 text-muted-foreground" />}
         />
         <StatsCard
-          title="Current Streak"
-          value={`${user.stats.currentStreak} days`}
+          title="Total Tasks"
+          value={dashboardStats?.totalTasks || 0}
           icon={<Target className="h-4 w-4 text-muted-foreground" />}
         />
         <StatsCard
           title="Total Score"
-          value={user.stats.totalScore.toLocaleString()}
+          value={(dashboardStats?.totalScore || 0).toLocaleString()}
           icon={<Trophy className="h-4 w-4 text-muted-foreground" />}
         />
       </div>
+      <div className="grid gap-4 md:grid-cols-3 mb-6">
+        <div className="bg-card p-4 rounded-lg border">
+          <h3 className="text-sm font-medium text-muted-foreground mb-2">To Do</h3>
+          <div className="text-2xl font-bold">{dashboardStats?.pendingTasks || 0}</div>
+        </div>
+        <div className="bg-card p-4 rounded-lg border">
+          <h3 className="text-sm font-medium text-muted-foreground mb-2">In Progress</h3>
+          <div className="text-2xl font-bold">{dashboardStats?.inProgressTasks || 0}</div>
+        </div>
+        <div className="bg-card p-4 rounded-lg border">
+          <h3 className="text-sm font-medium text-muted-foreground mb-2">Completed</h3>
+          <div className="text-2xl font-bold">{dashboardStats?.completedTasks || 0}</div>
+        </div>
+      </div>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <ActivityChart data={mockDailyStats} />
+        <ActivityChart data={activityData} />
         <PriorityPieChart tasks={tasks as Task[]} />
       </div>
       <div>

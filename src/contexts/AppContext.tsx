@@ -1,23 +1,14 @@
-
 "use client";
 
-import React, { createContext, useState, ReactNode, useEffect } from 'react';
-import { User, BoardState, Task, TaskPriority, ColumnId, UserPreferences } from '@/lib/types';
-import { mockUser, mockBoard } from '@/lib/mock-data';
+import React, { createContext, useState, ReactNode } from 'react';
+import { BoardState, Task, TaskPriority, ColumnId } from '@/lib/types';
 import { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 
+// Define the new, simplified context type
 interface AppContextType {
-  user: User | null;
   board: BoardState;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  theme: 'light' | 'dark';
-  setTheme: (theme: 'light' | 'dark') => void;
-  updateUserPreferences: (preferences: Partial<UserPreferences>) => void;
-  login: (email: string, pass: string) => Promise<void>;
-  logout: () => void;
-  addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'userId' | 'columnOrder' | 'status' | 'completedPomodoros'>) => void;
+  addTask: (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'userId' | 'columnOrder' | 'status' | 'completedPomodoros'>, userId: string) => void;
   updateTask: (task: Task) => void;
   updateTasks: (tasks: Task[]) => void;
   handleDragEnd: (event: DragEndEvent) => void;
@@ -25,80 +16,27 @@ interface AppContextType {
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
 
+const initialBoard: BoardState = {
+  tasks: {},
+  columns: {
+    todo: { id: 'todo', title: 'To Do', taskIds: [] },
+    'in-progress': { id: 'in-progress', title: 'In Progress', taskIds: [] },
+    done: { id: 'done', title: 'Done', taskIds: [] },
+  },
+  columnOrder: ['todo', 'in-progress', 'done'],
+};
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [board, setBoard] = useState<BoardState>(mockBoard);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [theme, setThemeState] = useState<'light' | 'dark'>('light');
+  const [board, setBoard] = useState<BoardState>(initialBoard);
 
-  useEffect(() => {
-    const authStatus = localStorage.getItem('isAuthenticated');
-    const storedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
-
-    if (authStatus === 'true') {
-      setUser(mockUser);
-      setIsAuthenticated(true);
-    }
-    
-    if (storedTheme) {
-      setTheme(storedTheme);
-    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      setTheme('dark');
-    }
-
-    setIsLoading(false);
-  }, []);
-
-  const setTheme = (newTheme: 'light' | 'dark') => {
-    setThemeState(newTheme);
-    localStorage.setItem('theme', newTheme);
-    document.documentElement.classList.remove('light', 'dark');
-    document.documentElement.classList.add(newTheme);
-    if(user) {
-        updateUserPreferences({ theme: newTheme });
-    }
-  };
-  
-  const updateUserPreferences = (preferences: Partial<UserPreferences>) => {
-    if (user) {
-      const newUser = {
-        ...user,
-        preferences: {
-          ...user.preferences,
-          ...preferences,
-        },
-      };
-      setUser(newUser);
-    }
-  };
-
-  const login = async (email: string, pass: string) => {
-    console.log('Logging in with', email, pass);
-    setIsLoading(true);
-    await new Promise(res => setTimeout(res, 1000)); // Simulate API call
-    setUser(mockUser);
-    setIsAuthenticated(true);
-    localStorage.setItem('isAuthenticated', 'true');
-    setIsLoading(false);
-  };
-
-  const logout = () => {
-    setIsLoading(true);
-    setUser(null);
-    setIsAuthenticated(false);
-    localStorage.removeItem('isAuthenticated');
-    setIsLoading(false);
-  };
-
-  const addTask = (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'userId' | 'columnOrder' | 'status'| 'completedPomodoros'>) => {
+  const addTask = (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'userId' | 'columnOrder' | 'status'| 'completedPomodoros'>, userId: string) => {
     const newTaskId = `task-${Date.now()}`;
     const newTask: Task = {
         ...taskData,
         id: newTaskId,
         createdAt: new Date(),
         updatedAt: new Date(),
-        userId: user?.uid || '12345',
+        userId: userId, // Use the provided userId
         status: 'todo',
         columnOrder: board.columns.todo.taskIds.length,
         completedPomodoros: 0,
@@ -146,7 +84,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
       });
        
-      // Sort tasks in 'todo' column based on new priorities
       const todoColumn = prevBoard.columns.todo;
       const sortedTaskIds = [...todoColumn.taskIds].sort((a, b) => {
           const priorityOrder: Record<TaskPriority, number> = { high: 0, medium: 1, low: 2 };
@@ -180,13 +117,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (!activeTask) return;
 
     const startColumnId = activeTask.status;
-    // over.id can be a column id or a task id
     const endColumnId = (board.columns[overId] ? overId : board.tasks[overId]?.status) as ColumnId;
 
     if (!startColumnId || !endColumnId) return;
 
     if (startColumnId === endColumnId) {
-      // Reordering within the same column
       const column = board.columns[startColumnId];
       const oldIndex = column.taskIds.indexOf(activeId);
       const newIndex = column.taskIds.indexOf(overId);
@@ -204,20 +139,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }));
       }
     } else {
-      // Moving to a different column
       const startColumn = board.columns[startColumnId];
       const endColumn = board.columns[endColumnId];
-
       const startTaskIds = startColumn.taskIds.filter(id => id !== activeId);
-      
-      const overIsAColumn = board.columns[overId];
       const newEndTaskIds = [...endColumn.taskIds];
       
-      if (overIsAColumn) {
-        // Dropped on a column
+      if (board.columns[overId]) {
         newEndTaskIds.push(activeId);
       } else {
-        // Dropped on a task
         const overIndex = endColumn.taskIds.indexOf(overId);
         newEndTaskIds.splice(overIndex, 0, activeId);
       }
@@ -238,23 +167,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           tasks: newTasks,
           columns: {
             ...prev.columns,
-            [startColumnId]: {
-              ...startColumn,
-              taskIds: startTaskIds
-            },
-            [endColumnId]: {
-              ...endColumn,
-              taskIds: newEndTaskIds
-            }
+            [startColumnId]: { ...startColumn, taskIds: startTaskIds },
+            [endColumnId]: { ...endColumn, taskIds: newEndTaskIds }
           }
         }
       })
     }
   };
 
-
   return (
-    <AppContext.Provider value={{ user, board, isAuthenticated, isLoading, login, logout, addTask, updateTask, updateTasks, handleDragEnd, theme, setTheme, updateUserPreferences }}>
+    <AppContext.Provider value={{ board, addTask, updateTask, updateTasks, handleDragEnd }}>
       {children}
     </AppContext.Provider>
   );

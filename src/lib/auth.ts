@@ -1,41 +1,79 @@
-import jwt from 'jsonwebtoken'
-import bcrypt from 'bcryptjs'
-import { prisma } from './prisma'
-import { User } from '@/lib/types'
+import * as jose from 'jose';
+import bcrypt from 'bcryptjs';
+import { prisma } from './prisma';
+import { User } from '@prisma/client';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production'
-const JWT_EXPIRES_IN = '7d'
+const JWT_SECRET = process.env.JWT_SECRET as string;
+const JWT_EXPIRES_IN = '7d';
 
-export interface JWTPayload {
-  userId: string
-  email: string
-  iat: number
-  exp: number
+// The JWT secret needs to be encoded for jose
+const secretKey = new TextEncoder().encode(JWT_SECRET);
+const alg = 'HS256';
+
+export interface JWTPayload extends jose.JWTPayload {
+  userId: string;
+  email: string;
 }
 
 export class AuthService {
+  // In-memory cache for verified tokens (prevents repeated JWT verification)
+  private static tokenCache = new Map<string, { payload: JWTPayload; expires: number }>();
+  
   // Hash password
   static async hashPassword(password: string): Promise<string> {
-    const saltRounds = 12
-    return await bcrypt.hash(password, saltRounds)
+    const saltRounds = 12;
+    return await bcrypt.hash(password, saltRounds);
   }
 
   // Compare password
   static async comparePassword(password: string, hashedPassword: string): Promise<boolean> {
-    return await bcrypt.compare(password, hashedPassword)
+    return await bcrypt.compare(password, hashedPassword);
   }
 
   // Generate JWT token
-  static generateToken(userId: string, email: string): string {
-    return jwt.sign({ userId, email }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN })
+  static async generateToken(userId: string, email: string): Promise<string> {
+    return await new jose.SignJWT({ userId, email })
+      .setProtectedHeader({ alg })
+      .setIssuedAt()
+      .setExpirationTime(JWT_EXPIRES_IN)
+      .sign(secretKey);
   }
 
-  // Verify JWT token
-  static verifyToken(token: string): JWTPayload | null {
+  // Verify JWT token with caching
+  static async verifyToken(token: string): Promise<JWTPayload | null> {
     try {
-      return jwt.verify(token, JWT_SECRET) as JWTPayload
+      // Check cache first
+      const cached = this.tokenCache.get(token);
+      if (cached && Date.now() < cached.expires) {
+        return cached.payload;
+      }
+
+      const { payload } = await jose.jwtVerify(token, secretKey);
+      const jwtPayload = payload as JWTPayload;
+      
+      // Cache for 5 minutes to reduce repeated verification
+      const cacheExpiry = Date.now() + (5 * 60 * 1000);
+      this.tokenCache.set(token, { payload: jwtPayload, expires: cacheExpiry });
+      
+      // Clean up expired cache entries periodically
+      if (this.tokenCache.size > 100) {
+        this.cleanupCache();
+      }
+      
+      return jwtPayload;
     } catch (error) {
-      return null
+      console.error('[AuthService] JWT Verification Error:', error);
+      return null;
+    }
+  }
+
+  // Clean up expired cache entries
+  private static cleanupCache(): void {
+    const now = Date.now();
+    for (const [token, data] of this.tokenCache.entries()) {
+      if (now >= data.expires) {
+        this.tokenCache.delete(token);
+      }
     }
   }
 
@@ -44,15 +82,15 @@ export class AuthService {
     try {
       // Check if user already exists
       const existingUser = await prisma.user.findUnique({
-        where: { email }
-      })
+        where: { email },
+      });
 
       if (existingUser) {
-        return { error: 'User already exists' }
+        return { error: 'User already exists' };
       }
 
       // Hash password
-      const hashedPassword = await this.hashPassword(password)
+      const hashedPassword = await this.hashPassword(password);
 
       // Create user
       const user = await prisma.user.create({
@@ -60,18 +98,15 @@ export class AuthService {
           email,
           password: hashedPassword,
           fullName,
-        }
-      })
-
-      // Profile data is now stored directly in User model
-      // No need to create separate profile
+        },
+      });
 
       // Generate token
-      const token = this.generateToken(user.id, user.email)
+      const token = await this.generateToken(user.id, user.email);
 
-      return { user, token }
+      return { user, token };
     } catch (error: any) {
-      return { error: error.message }
+      return { error: error.message };
     }
   }
 
@@ -80,43 +115,43 @@ export class AuthService {
     try {
       // Find user
       const user = await prisma.user.findUnique({
-        where: { email }
-      })
+        where: { email },
+      });
 
       if (!user) {
-        return { error: 'Invalid credentials' }
+        return { error: 'Invalid credentials' };
       }
 
       // Verify password
-      const isValidPassword = await this.comparePassword(password, user.password)
+      const isValidPassword = await this.comparePassword(password, user.password);
       if (!isValidPassword) {
-        return { error: 'Invalid credentials' }
+        return { error: 'Invalid credentials' };
       }
 
       // Generate token
-      const token = this.generateToken(user.id, user.email)
+      const token = await this.generateToken(user.id, user.email);
 
-      return { user, token }
+      return { user, token };
     } catch (error: any) {
-      return { error: error.message }
+      return { error: error.message };
     }
   }
 
   // Get user from token
   static async getUserFromToken(token: string): Promise<User | null> {
     try {
-      const payload = this.verifyToken(token)
+      const payload = await this.verifyToken(token);
       if (!payload) {
-        return null
+        return null;
       }
 
       const user = await prisma.user.findUnique({
-        where: { id: payload.userId }
-      })
+        where: { id: payload.userId },
+      });
 
-      return user
+      return user;
     } catch (error) {
-      return null
+      return null;
     }
   }
 }

@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppContext } from "@/hooks/useAppContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { TaskPriority } from "@/lib/types";
 import { Plus } from "lucide-react";
 import { useState, FormEvent } from "react";
@@ -28,26 +29,33 @@ import { useState, FormEvent } from "react";
 export function CreateTaskDialog() {
   const [open, setOpen] = useState(false);
   const { addTask } = useAppContext();
+  const { user } = useAuth();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [estimatedPomodoros, setEstimatedPomodoros] = useState(1);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!title) return;
-    addTask({
-      title,
-      description,
-      priority,
-      estimatedPomodoros,
-    });
-    setOpen(false);
-    // Reset form
-    setTitle("");
-    setDescription("");
-    setPriority("medium");
-    setEstimatedPomodoros(1);
+    if (!title || !user) return;
+    
+    try {
+      await addTask({
+        title,
+        description,
+        priority,
+        estimatedPomodoros,
+      }, user.id);
+      
+      setOpen(false);
+      // Reset form
+      setTitle("");
+      setDescription("");
+      setPriority("medium");
+      setEstimatedPomodoros(1);
+    } catch (error) {
+      console.error('Failed to create task:', error);
+    }
   };
 
   return (

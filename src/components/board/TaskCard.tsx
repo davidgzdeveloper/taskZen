@@ -6,8 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Task, TaskPriority } from "@/lib/types";
 import { Clock, GripVertical } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { useRef, useEffect, useState } from "react";
+import { draggable } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 
 const priorityClasses: Record<TaskPriority, string> = {
   high: "border-l-4 border-destructive",
@@ -17,35 +17,49 @@ const priorityClasses: Record<TaskPriority, string> = {
 
 interface TaskCardProps {
   task: Task;
+  columnId: string;
 }
 
-export function TaskCard({ task }: TaskCardProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: task.id });
+export function TaskCard({ task, columnId }: TaskCardProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 10 : 'auto',
-  };
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
+    const cleanup = draggable({
+      element,
+      getInitialData() {
+        return { taskId: task.id, columnId };
+      },
+      onDragStart() {
+        setIsDragging(true);
+      },
+      onDrop() {
+        setIsDragging(false);
+      },
+    });
+
+    return cleanup;
+  }, [task.id, columnId]);
 
   return (
     <div
-      ref={setNodeRef}
-      style={style}
+      ref={ref}
       className="mb-4"
+      style={{ 
+        cursor: isDragging ? 'grabbing' : 'grab',
+        opacity: isDragging ? 0.5 : 1,
+        transform: isDragging ? 'scale(1.05)' : 'scale(1)',
+        transition: 'transform 0.2s ease, opacity 0.2s ease'
+      }}
     >
       <Card className={`shadow-sm hover:shadow-md transition-shadow ${priorityClasses[task.priority]} ${isDragging ? 'ring-2 ring-primary' : ''}`}>
         <CardContent className="p-3">
           <div className="flex justify-between items-start">
             <p className="font-semibold text-base leading-tight mb-2">{task.title}</p>
-            <div {...attributes} {...listeners} className="cursor-grab p-1">
+            <div className="cursor-grab p-1">
               <GripVertical className="h-5 w-5 text-muted-foreground" />
             </div>
           </div>

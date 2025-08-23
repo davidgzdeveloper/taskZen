@@ -1,12 +1,14 @@
 "use client";
 
-import { useContext } from 'react';
-import { AppContext } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const useAppContext = () => {
-  const context = useContext(AppContext);
-  if (context === undefined) {
-    throw new Error('useAppContext must be used within an AppProvider');
-  }
-  return context;
+  const context = useAuth();
+  return {
+    board: context.board,
+    addTask: context.addTask as (taskData: any, userId: string) => Promise<void>,
+    updateTask: context.updateTask,
+    updateTasks: context.updateTasks,
+    handleDragEnd: context.handleDragEnd as (event: any) => Promise<void>,
+  };
 };

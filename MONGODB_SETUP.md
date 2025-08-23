@@ -125,3 +125,4 @@ The system uses JWT tokens for authentication:
 - **Password Hashing**: Passwords are automatically hashed with bcrypt
 - **Token Expiration**: JWT tokens expire after 7 days
 - **HTTPS**: Always use HTTPS in production for secure token transmission
+

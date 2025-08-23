@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import React, { useEffect } from "react";
+import React from "react";
 
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -40,21 +40,20 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   const { user, loading } = useAuth();
+  const isAuthenticated = !!user;
   const router = useRouter();
   const pathname = usePathname();
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push("/login");
-    }
-  }, [user, loading, router]);
-
-  if (loading || !user) {
+  if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
+  }
+
+  if (!isAuthenticated) {
+    return null; // Let middleware handle redirect
   }
 
   return (
@@ -67,15 +66,16 @@ export default function MainLayout({
           <SidebarMenu>
             {navItems.map((item) => (
               <SidebarMenuItem key={item.href}>
-                <Link href={item.href} legacyBehavior passHref>
-                  <SidebarMenuButton
-                    isActive={pathname === item.href}
-                    tooltip={{ children: item.label }}
-                  >
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === item.href}
+                  tooltip={{ children: item.label }}
+                >
+                  <Link href={item.href}>
                     <item.icon />
                     <span>{item.label}</span>
-                  </SidebarMenuButton>
-                </Link>
+                  </Link>
+                </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
@@ -94,7 +94,7 @@ export default function MainLayout({
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-                <p className="text-sm font-semibold text-accent-foreground">0 pts</p>
+                {/* <p className="text-sm font-semibold text-accent-foreground">{user?.stats.totalScore.toLocaleString()} pts</p> */}
             </div>
             <UserNav />
           </div>
