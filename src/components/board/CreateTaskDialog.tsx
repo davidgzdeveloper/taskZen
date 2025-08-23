@@ -66,14 +66,14 @@ export function CreateTaskDialog() {
           Add Task
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px]" aria-describedby="dialog-description">
+        <DialogHeader>
+          <DialogTitle id="dialog-title">Add a new task</DialogTitle>
+          <DialogDescription id="dialog-description">
+            What do you want to get done?
+          </DialogDescription>
+        </DialogHeader>
         <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Add a new task</DialogTitle>
-            <DialogDescription>
-              What do you want to get done?
-            </DialogDescription>
-          </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="title" className="text-right">

@@ -68,22 +68,32 @@ export const KanbanBoard = () => {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Kanban Board</h1>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleOptimize} disabled={isOptimizing}>
+      {/* Header - responsive */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold">Kanban Board</h1>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleOptimize} 
+            disabled={isOptimizing}
+            className="w-full sm:w-auto"
+          >
             {isOptimizing ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <Sparkles className="mr-2 h-4 w-4" />
             )}
-            Optimize with AI
+            <span className="hidden sm:inline">Optimize with AI</span>
+            <span className="sm:hidden">AI Optimize</span>
           </Button>
           <CreateTaskDialog />
         </div>
       </div>
-      <div className="flex-1 overflow-x-auto">
-        <div className="flex gap-6 pb-4">
+
+      {/* Board - responsive layout */}
+      <div className="flex-1 overflow-hidden">
+        {/* Mobile: Vertical stack */}
+        <div className="block md:hidden space-y-6">
           {board.columnOrder.map(columnId => {
             const column = board.columns[columnId];
             const tasks = column.taskIds.map(taskId => board.tasks[taskId]);
@@ -92,6 +102,23 @@ export const KanbanBoard = () => {
                 key={column.id}
                 column={column}
                 tasks={tasks as Task[]}
+                isMobile={true}
+              />
+            );
+          })}
+        </div>
+        
+        {/* Tablet & Desktop: Horizontal layout */}
+        <div className="hidden md:flex md:gap-4 lg:gap-6 h-full overflow-x-auto pb-4">
+          {board.columnOrder.map(columnId => {
+            const column = board.columns[columnId];
+            const tasks = column.taskIds.map(taskId => board.tasks[taskId]);
+            return (
+              <KanbanColumn
+                key={column.id}
+                column={column}
+                tasks={tasks as Task[]}
+                isMobile={false}
               />
             );
           })}

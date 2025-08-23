@@ -9,23 +9,24 @@ import { Play, Pause, RotateCcw } from "lucide-react";
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 
-const CircleProgress = ({ progress }: { progress: number }) => {
-  const strokeWidth = 8;
-  const radius = 90;
+const CircleProgress = ({ progress, isMobile = false }: { progress: number, isMobile?: boolean }) => {
+  const strokeWidth = isMobile ? 6 : 8;
+  const radius = isMobile ? 70 : 90;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (progress / 100) * circumference;
+  const size = isMobile ? 180 : 200;
 
   return (
-    <div className="relative w-56 h-56">
-      <svg className="w-full h-full" viewBox="0 0 200 200">
+    <div className={`relative ${isMobile ? 'w-44 h-44' : 'w-56 h-56'}`}>
+      <svg className="w-full h-full" viewBox={`0 0 ${size} ${size}`}>
         <circle
           className="text-muted"
           stroke="currentColor"
           strokeWidth={strokeWidth}
           fill="transparent"
           r={radius}
-          cx="100"
-          cy="100"
+          cx={size/2}
+          cy={size/2}
         />
         <circle
           className="text-primary transition-all duration-300"
@@ -36,9 +37,9 @@ const CircleProgress = ({ progress }: { progress: number }) => {
           strokeLinecap="round"
           fill="transparent"
           r={radius}
-          cx="100"
-          cy="100"
-          transform="rotate(-90 100 100)"
+          cx={size/2}
+          cy={size/2}
+          transform={`rotate(-90 ${size/2} ${size/2})`}
         />
       </svg>
       
@@ -104,32 +105,70 @@ export function PomodoroTimer() {
 
   const progress = ((duration * 60 - time) / (duration * 60)) * 100;
 
+  // Detect mobile using screen size
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768); // md breakpoint
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   return (
-    <div className="flex items-center justify-center">
-        <Card className="w-full max-w-md">
-            <CardHeader>
-                <CardTitle className="text-center text-2xl">
+    <div className="flex items-center justify-center p-4">
+        <Card className={`w-full ${isMobile ? 'max-w-sm' : 'max-w-md'}`}>
+            <CardHeader className={isMobile ? 'pb-4' : ''}>
+                <CardTitle className={`text-center ${isMobile ? 'text-xl' : 'text-2xl'}`}>
                     {sessionType === 'work' ? 'Focus Session' : 'Time for a Break'}
                 </CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col items-center gap-6">
+            <CardContent className={`flex flex-col items-center ${isMobile ? 'gap-4' : 'gap-6'}`}>
                 <div className="relative">
-                    <CircleProgress progress={progress} />
+                    <CircleProgress progress={progress} isMobile={isMobile} />
                     <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-5xl font-bold font-mono text-foreground">{formatTime(time)}</span>
+                        <span className={`${isMobile ? 'text-3xl' : 'text-5xl'} font-bold font-mono text-foreground`}>
+                          {formatTime(time)}
+                        </span>
                     </div>
                 </div>
                 
-                <div className="flex gap-2">
-                    <Button variant={duration === 25 ? 'default' : 'secondary'} onClick={() => setPreset(25, 5)}>Standard (25/5)</Button>
-                    <Button variant={duration === 15 ? 'default' : 'secondary'} onClick={() => setPreset(15, 3)}>Short (15/3)</Button>
-                    <Button variant={duration === 45 ? 'default' : 'secondary'} onClick={() => setPreset(45, 10)}>Long (45/10)</Button>
+                {/* Preset Buttons - responsive layout */}
+                <div className={`${isMobile ? 'flex flex-col gap-2 w-full' : 'flex gap-2'}`}>
+                    <Button 
+                      variant={duration === 25 ? 'default' : 'secondary'} 
+                      onClick={() => setPreset(25, 5)}
+                      className={isMobile ? 'text-sm' : ''}
+                      size={isMobile ? 'sm' : 'default'}
+                    >
+                      Standard (25/5)
+                    </Button>
+                    <Button 
+                      variant={duration === 15 ? 'default' : 'secondary'} 
+                      onClick={() => setPreset(15, 3)}
+                      className={isMobile ? 'text-sm' : ''}
+                      size={isMobile ? 'sm' : 'default'}
+                    >
+                      Short (15/3)
+                    </Button>
+                    <Button 
+                      variant={duration === 45 ? 'default' : 'secondary'} 
+                      onClick={() => setPreset(45, 10)}
+                      className={isMobile ? 'text-sm' : ''}
+                      size={isMobile ? 'sm' : 'default'}
+                    >
+                      Long (45/10)
+                    </Button>
                 </div>
 
+                {/* Task Selection */}
                 <div className="w-full">
                     <Select value={selectedTaskId} onValueChange={setSelectedTaskId}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select a task to focus on (optional)" />
+                        <SelectTrigger className={isMobile ? 'text-sm' : ''}>
+                            <SelectValue placeholder={isMobile ? "Select task (optional)" : "Select a task to focus on (optional)"} />
                         </SelectTrigger>
                         <SelectContent>
                             {tasks.map(task => (
@@ -139,12 +178,22 @@ export function PomodoroTimer() {
                     </Select>
                 </div>
 
-                <div className="flex gap-4">
-                    <Button size="lg" onClick={() => setIsActive(!isActive)} className="w-32">
+                {/* Control Buttons */}
+                <div className={`${isMobile ? 'flex flex-col gap-2 w-full' : 'flex gap-4'}`}>
+                    <Button 
+                      size={isMobile ? 'default' : 'lg'} 
+                      onClick={() => setIsActive(!isActive)} 
+                      className={isMobile ? 'w-full' : 'w-32'}
+                    >
                         {isActive ? <Pause className="mr-2" /> : <Play className="mr-2" />}
                         {isActive ? 'Pause' : 'Start'}
                     </Button>
-                    <Button size="lg" variant="outline" onClick={resetTimer}>
+                    <Button 
+                      size={isMobile ? 'default' : 'lg'} 
+                      variant="outline" 
+                      onClick={resetTimer}
+                      className={isMobile ? 'w-full' : ''}
+                    >
                         <RotateCcw className="mr-2" />
                         Reset
                     </Button>
