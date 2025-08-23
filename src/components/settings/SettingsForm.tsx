@@ -33,9 +33,11 @@ export function SettingsForm() {
     const handleThemeChange = (checked: boolean) => {
         const newTheme = checked ? 'dark' : 'light';
         setTheme(newTheme);
-        // Optional: apply theme immediately to the UI
+        // Apply theme immediately to the UI
         document.documentElement.classList.remove('light', 'dark');
         document.documentElement.classList.add(newTheme);
+        // Save to localStorage for persistence
+        localStorage.setItem('theme', newTheme);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {

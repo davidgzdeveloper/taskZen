@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { ThemeProvider } from '@/components/providers/ThemeProvider';
 
 export const metadata: Metadata = {
   title: 'TaskZen',
@@ -40,8 +41,10 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <AuthProvider>
-          {children}
-          <Toaster />
+          <ThemeProvider>
+            {children}
+            <Toaster />
+          </ThemeProvider>
         </AuthProvider>
       </body>
     </html>

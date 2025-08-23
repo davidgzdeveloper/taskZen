@@ -5,7 +5,7 @@
 ### High Priority
 - [x] User authentication system
 - [x] Task management functionality (with Prisma ORM)
-- [ ] Dashboard with analytics
+- [x] Dashboard with analytics
 - [ ] Implement server-side session handling with Middleware
 - [ ] Mobile responsive design
 
@@ -37,7 +37,7 @@
 
 - [x] Code refactoring (migrated to Prisma ORM)
 - [x] Refactor AppContext to remove mock data and initialize with an empty state
-- [ ] Refactor Dashboard to remove mock data and use real data
+- [x] Refactor Dashboard to remove mock data and use real data
 - [x] Performance optimization (token caching, reduced API calls, font optimization)
 - [ ] Test coverage improvement
 - [x] Refactored `profileService.ts` and `AuthContext.tsx` to use a dedicated `UserProfile` type, improving type safety.
@@ -60,6 +60,19 @@
 - ✅ Added loadTasks function to fetch existing tasks from database on app start
 - ✅ Updated all task API endpoints to use Authorization token instead of middleware headers
 - ✅ Tasks now persist correctly after page refresh and app restart
+
+### Drag & Drop Migration
+- ✅ Migrated from @dnd-kit to @atlaskit/pragmatic-drag-and-drop
+- ✅ Updated KanbanBoard, KanbanColumn, and TaskCard components
+- ✅ Improved drag & drop performance and visual feedback
+- ✅ Fixed data transfer between draggable elements and drop targets
+
+### Dashboard Improvements
+- ✅ Updated dashboard to use real task data from database API
+- ✅ Added `/api/dashboard/stats` endpoint with Authorization token support
+- ✅ Implemented real-time statistics updates when tasks change
+- ✅ Added task breakdown by status (To Do, In Progress, Completed)
+- ✅ Fixed React useEffect dependency array issue for stable renders
 
 ## Notes
 

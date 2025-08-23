@@ -214,7 +214,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       Cookies.set('token', data.token, { expires: 7, path: '/' })
-      await fetchUserWithPreferences(data.user, data.token); // Fetch preferences on sign-in
+      
+      // Load user preferences and tasks in parallel for faster loading
+      await Promise.all([
+        fetchUserWithPreferences(data.user, data.token),
+        loadTasks(data.token)
+      ]);
+      
       router.push('/dashboard')
 
       return {}

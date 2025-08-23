@@ -21,27 +21,56 @@ export default function DashboardPage() {
   
   // Load dashboard stats from API
   useEffect(() => {
+    let isMounted = true;
+    
     const loadDashboardStats = async () => {
-      if (!session) return;
+      if (!session) {
+        setLoading(false);
+        return;
+      }
       
       try {
         const response = await fetch('/api/dashboard/stats', {
           headers: { 'Authorization': `Bearer ${session.token}` }
         });
         
-        if (response.ok) {
+        if (response.ok && isMounted) {
           const stats = await response.json();
           setDashboardStats(stats);
         }
       } catch (error) {
         console.error('Failed to load dashboard stats:', error);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
-    loadDashboardStats();
-  }, [session, tasks.length]); // Re-load when number of tasks changes
+    if (session) {
+      loadDashboardStats();
+    }
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [session]); // Only depend on session, not tasks.length to avoid multiple calls
+  
+  // Reload stats when tasks change significantly (but debounced)
+  useEffect(() => {
+    if (!session || loading) return;
+    
+    const timeoutId = setTimeout(() => {
+      fetch('/api/dashboard/stats', {
+        headers: { 'Authorization': `Bearer ${session.token}` }
+      })
+      .then(res => res.ok ? res.json() : null)
+      .then(stats => stats && setDashboardStats(stats))
+      .catch(err => console.error('Failed to update dashboard stats:', err));
+    }, 500); // Debounce for 500ms
+    
+    return () => clearTimeout(timeoutId);
+  }, [tasks.length, session, loading]);
   
   if (!user) return null;
 
