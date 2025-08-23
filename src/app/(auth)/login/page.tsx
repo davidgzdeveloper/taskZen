@@ -29,21 +29,29 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
     
-    const { error } = await signIn(email, password);
-    
-    if (error) {
+    try {
+      const result = await signIn(email, password);
+      
+      if (result.error) {
+        toast({
+          title: "Error",
+          description: result.error,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Logged in successfully!",
+        });
+        console.log(user);
+        router.push('/dashboard');
+      }
+    } catch (err) {
       toast({
         title: "Error",
-        description: typeof error === 'string' ? error : error.message || 'Login failed',
+        description: "An unexpected error occurred",
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Success",
-        description: "Logged in successfully!",
-      });
-      console.log(user);
-      router.push('/dashboard');
     }
     
     setIsLoading(false);
