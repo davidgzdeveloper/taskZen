@@ -3,6 +3,9 @@ import { TaskService } from '@/lib/services/taskService'
 import { CreateTaskRequest } from '@/lib/types'
 import { AuthService } from '@/lib/auth'
 
+// Force Node.js runtime for bcryptjs compatibility
+export const runtime = 'nodejs'
+
 export async function GET(request: NextRequest) {
   try {
     // Get token from Authorization header

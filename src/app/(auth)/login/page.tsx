@@ -34,7 +34,7 @@ export default function LoginPage() {
     if (error) {
       toast({
         title: "Error",
-        description: error.message,
+        description: typeof error === 'string' ? error : error.message || 'Login failed',
         variant: "destructive",
       });
     } else {

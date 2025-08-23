@@ -3,6 +3,9 @@ import { TaskService } from '@/lib/services/taskService'
 import { UpdateTaskRequest } from '@/lib/types'
 import { AuthService } from '@/lib/auth'
 
+// Force Node.js runtime for bcryptjs compatibility
+export const runtime = 'nodejs'
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

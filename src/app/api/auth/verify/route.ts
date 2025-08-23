@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { AuthService } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+// Force Node.js runtime for bcryptjs compatibility
+export const runtime = 'nodejs'
+
 export async function GET(request: NextRequest) {
   try {
     // Get token from Authorization header

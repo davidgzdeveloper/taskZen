@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { AuthService } from '@/lib/auth';
 
+// Force Node.js runtime for bcryptjs compatibility
+export const runtime = 'nodejs'
+
 
 // GET /api/user/preferences - Fetch user preferences
 export async function GET(request: NextRequest) {
