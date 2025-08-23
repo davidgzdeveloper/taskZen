@@ -43,26 +43,36 @@ export function SettingsForm() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        const { error } = await updateUserPreferences({
-            pomodoroWork,
-            pomodoroBreak,
-            notifications,
-            theme: theme.toUpperCase() as 'LIGHT' | 'DARK',
-        });
-        setIsLoading(false);
+        
+        try {
+            const result = await updateUserPreferences({
+                pomodoroWork,
+                pomodoroBreak,
+                notifications,
+                theme: theme.toUpperCase() as 'LIGHT' | 'DARK',
+            });
 
-        if (error) {
+            if (result.error) {
+                toast({
+                    title: "Error",
+                    description: result.error,
+                    variant: "destructive",
+                });
+            } else {
+                toast({
+                    title: "Settings Saved",
+                    description: "Your preferences have been updated.",
+                });
+            }
+        } catch (err) {
             toast({
                 title: "Error",
-                description: "Failed to save settings. Please try again.",
+                description: "An unexpected error occurred while saving settings.",
                 variant: "destructive",
             });
-        } else {
-            toast({
-                title: "Settings Saved",
-                description: "Your preferences have been updated.",
-            });
         }
+        
+        setIsLoading(false);
     };
 
     if (!user) {
