@@ -5,9 +5,12 @@ import { AuthService } from '@/lib/auth'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Await params in Next.js 15
+    const { id } = await params
+    
     // Get token from Authorization header
     const authHeader = request.headers.get('authorization')
     const token = authHeader?.replace('Bearer ', '')
@@ -23,7 +26,7 @@ export async function GET(
 
     const userId = user.id
 
-    const task = await TaskService.getTaskById(params.id, userId)
+    const task = await TaskService.getTaskById(id, userId)
     if (!task) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 })
     }
@@ -46,9 +49,12 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Await params in Next.js 15
+    const { id } = await params
+    
     // Get token from Authorization header
     const authHeader = request.headers.get('authorization')
     const token = authHeader?.replace('Bearer ', '')
@@ -73,7 +79,7 @@ export async function PUT(
       priority: updates.priority?.toUpperCase() as 'LOW' | 'MEDIUM' | 'HIGH',
     }
     
-    const task = await TaskService.updateTask(params.id, userId, transformedUpdates)
+    const task = await TaskService.updateTask(id, userId, transformedUpdates)
     
     // Transform task back to frontend format
     const transformedTask = {
@@ -93,9 +99,12 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Await params in Next.js 15
+    const { id } = await params
+    
     // Get token from Authorization header
     const authHeader = request.headers.get('authorization')
     const token = authHeader?.replace('Bearer ', '')
@@ -111,7 +120,7 @@ export async function DELETE(
 
     const userId = user.id
 
-    await TaskService.deleteTask(params.id, userId)
+    await TaskService.deleteTask(id, userId)
     return NextResponse.json({ message: 'Task deleted successfully' })
   } catch (error: any) {
     return NextResponse.json(
@@ -123,9 +132,12 @@ export async function DELETE(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Await params in Next.js 15
+    const { id } = await params
+    
     // Get token from Authorization header
     const authHeader = request.headers.get('authorization')
     const token = authHeader?.replace('Bearer ', '')
@@ -149,7 +161,7 @@ export async function PATCH(
       )
     }
 
-    const task = await TaskService.moveTask(params.id, userId, status)
+    const task = await TaskService.moveTask(id, userId, status)
     return NextResponse.json(task)
   } catch (error: any) {
     return NextResponse.json(
