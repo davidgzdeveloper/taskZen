@@ -72,7 +72,7 @@ export default function SignupPage() {
   const totalLoading = isLoading || loading;
 
   return (
-    <Card className="mx-auto w-full max-w-sm">
+    <Card className="w-full">
       <CardHeader>
         <CardTitle className="text-2xl">Sign Up</CardTitle>
         <CardDescription>

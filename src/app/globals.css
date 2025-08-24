@@ -85,6 +85,17 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Ensure minimum styling if CSS variables fail */
+  html {
+    background-color: white;
+    color: #1a1a1a;
+  }
+  
+  .dark html {
+    background-color: #0a0a0a;
+    color: #fafafa;
+  }
 }
 
 /* Visually hidden utility for accessibility */

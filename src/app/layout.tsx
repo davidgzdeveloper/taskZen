@@ -39,7 +39,7 @@ export default function RootLayout({
           `
         }} />
       </head>
-      <body className="font-body antialiased">
+      <body className="font-body antialiased min-h-screen bg-background text-foreground">
         <AuthProvider>
           <ThemeProvider>
             {children}

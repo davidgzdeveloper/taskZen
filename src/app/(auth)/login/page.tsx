@@ -60,7 +60,7 @@ export default function LoginPage() {
   const totalLoading = isLoading || loading;
 
   return (
-    <Card className="mx-auto w-full max-w-sm">
+    <Card className="w-full">
       <CardHeader>
         <CardTitle className="text-2xl">Login</CardTitle>
         <CardDescription>
