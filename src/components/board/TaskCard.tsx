@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { useRef, useEffect, useState } from "react";
 import { draggable } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 const priorityClasses: Record<TaskPriority, string> = {
   high: "border-l-4 border-destructive",
@@ -27,6 +28,7 @@ export function TaskCard({ task, columnId, isMobile = false }: TaskCardProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const { toast } = useToast();
+  const { session } = useAuth();
 
   useEffect(() => {
     const element = ref.current;
@@ -58,9 +60,21 @@ export function TaskCard({ task, columnId, isMobile = false }: TaskCardProps) {
 
   const moveTask = async (targetColumn: string) => {
     try {
+      if (!session) {
+        toast({ 
+          title: "Authentication Error", 
+          description: "Please log in to move tasks.",
+          variant: "destructive" 
+        });
+        return;
+      }
+
       const response = await fetch(`/api/tasks/${task.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.token}`
+        },
         body: JSON.stringify({ status: targetColumn }),
       });
       if (!response.ok) throw new Error('Failed to move task');
