@@ -2,6 +2,7 @@
 "use client";
 
 import { useAppContext } from "@/hooks/useAppContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { KanbanColumn } from "./KanbanColumn";
 import { CreateTaskDialog } from "./CreateTaskDialog";
 import { Button } from "../ui/button";
@@ -14,6 +15,7 @@ import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/ad
 
 export const KanbanBoard = () => {
   const { board, updateTasks } = useAppContext();
+  const { session } = useAuth();
   const [isOptimizing, setIsOptimizing] = useState(false);
   const { toast } = useToast();
 
@@ -33,9 +35,21 @@ export const KanbanBoard = () => {
 
         // Persist change to backend
         try {
+            if (!session) {
+                toast({
+                    title: "Authentication Error",
+                    description: "Please log in to update tasks.",
+                    variant: "destructive",
+                });
+                return;
+            }
+
             const response = await fetch(`/api/tasks/${taskId}`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.token}`
+                },
                 body: JSON.stringify({ status: destinationColumnId }),
             });
 
@@ -61,7 +75,7 @@ export const KanbanBoard = () => {
     });
 
     return cleanup;
-  }, [board, updateTasks, toast]);
+  }, [board, updateTasks, toast, session]);
   
   const handleOptimize = async () => {
     setIsOptimizing(true);
