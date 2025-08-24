@@ -9,6 +9,7 @@ export const useAppContext = () => {
     addTask: context.addTask as (taskData: any, userId: string) => Promise<void>,
     updateTask: context.updateTask,
     updateTasks: context.updateTasks,
+    moveTask: context.moveTask,
     user: context.user,
   };
 };

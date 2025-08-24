@@ -69,13 +69,20 @@ export function TaskCard({ task, columnId, isMobile = false }: TaskCardProps) {
         return;
       }
 
+      // Convert frontend status format to backend format
+      const statusMap: Record<string, string> = {
+        'todo': 'TODO',
+        'in-progress': 'IN_PROGRESS',
+        'done': 'DONE'
+      };
+
       const response = await fetch(`/api/tasks/${task.id}`, {
         method: 'PATCH',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.token}`
         },
-        body: JSON.stringify({ status: targetColumn }),
+        body: JSON.stringify({ status: statusMap[targetColumn] }),
       });
       if (!response.ok) throw new Error('Failed to move task');
       toast({ title: "Task Moved" });

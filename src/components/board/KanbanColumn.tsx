@@ -14,24 +14,27 @@ export function KanbanColumn({ column, tasks, isMobile = false }: { column: Colu
     const element = ref.current;
     if (!element) return;
 
-    const cleanup = dropTargetForElements({
-      element,
-      getData() {
-        return { columnId: column.id };
-      },
-      onDragEnter() {
-        setIsDraggedOver(true);
-      },
-      onDragLeave() {
-        setIsDraggedOver(false);
-      },
-      onDrop() {
-        setIsDraggedOver(false);
-      },
-    });
+    // Only enable drop target on desktop (not mobile)
+    if (!isMobile) {
+      const cleanup = dropTargetForElements({
+        element,
+        getData() {
+          return { columnId: column.id };
+        },
+        onDragEnter() {
+          setIsDraggedOver(true);
+        },
+        onDragLeave() {
+          setIsDraggedOver(false);
+        },
+        onDrop() {
+          setIsDraggedOver(false);
+        },
+      });
 
-    return cleanup;
-  }, [column.id]);
+      return cleanup;
+    }
+  }, [column.id, isMobile]);
 
   // Responsive classes based on mobile prop
   const containerClasses = isMobile 

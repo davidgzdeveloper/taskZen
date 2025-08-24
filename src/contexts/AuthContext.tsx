@@ -38,6 +38,7 @@ interface AuthContextType {
   addTask: (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'userId' | 'columnOrder' | 'status' | 'completedPomodoros'>, userId: string) => Promise<void>
   updateTask: (task: Task) => void
   updateTasks: (tasks: Task[]) => void
+  moveTask: (taskId: string, sourceColumn: ColumnId, destinationColumn: ColumnId) => void
   handleDragEnd: (event: any) => Promise<void>
 }
 
@@ -401,6 +402,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const moveTask = (taskId: string, sourceColumn: ColumnId, destinationColumn: ColumnId) => {
+    setBoard(prevBoard => {
+      // Don't move if same column
+      if (sourceColumn === destinationColumn) return prevBoard;
+
+      // Update task status
+      const updatedTask = {
+        ...prevBoard.tasks[taskId],
+        status: destinationColumn
+      };
+
+      // Remove from source column
+      const newSourceColumn = {
+        ...prevBoard.columns[sourceColumn],
+        taskIds: prevBoard.columns[sourceColumn].taskIds.filter(id => id !== taskId)
+      };
+
+      // Add to destination column
+      const newDestinationColumn = {
+        ...prevBoard.columns[destinationColumn],
+        taskIds: [...prevBoard.columns[destinationColumn].taskIds, taskId]
+      };
+
+      return {
+        ...prevBoard,
+        tasks: {
+          ...prevBoard.tasks,
+          [taskId]: updatedTask
+        },
+        columns: {
+          ...prevBoard.columns,
+          [sourceColumn]: newSourceColumn,
+          [destinationColumn]: newDestinationColumn
+        }
+      };
+    });
+  };
+
   const handleDragEnd = async (event: any) => {
     const { active, over } = event;
     if (!over) return;
@@ -505,6 +544,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     addTask,
     updateTask,
     updateTasks,
+    moveTask,
     handleDragEnd,
   }
 

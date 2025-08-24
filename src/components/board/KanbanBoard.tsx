@@ -10,14 +10,16 @@ import { Sparkles, Loader2 } from "lucide-react";
 import { runPrioritizeTasks } from "@/lib/actions";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Task, ColumnId } from "@/lib/types";
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 
 export const KanbanBoard = () => {
-  const { board, updateTasks } = useAppContext();
+  const { board, updateTasks, moveTask } = useAppContext();
   const { session } = useAuth();
   const [isOptimizing, setIsOptimizing] = useState(false);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const cleanup = monitorForElements({
@@ -26,12 +28,16 @@ export const KanbanBoard = () => {
         if (!destination) return;
 
         const taskId = source.data.taskId as string;
+        const sourceColumnId = source.data.columnId as ColumnId;
         const destinationColumnId = destination.data.columnId as ColumnId;
         
-        if (!taskId || !destinationColumnId) return;
+        if (!taskId || !destinationColumnId || !sourceColumnId) return;
         
         const task = board.tasks[taskId];
         if (task && task.status === destinationColumnId) return; // No change
+
+        // Immediately update local state for instant visual feedback
+        moveTask(taskId, sourceColumnId, destinationColumnId);
 
         // Persist change to backend
         try {
@@ -44,21 +50,27 @@ export const KanbanBoard = () => {
                 return;
             }
 
+            // Convert frontend status format to backend format
+            const statusMap: Record<string, string> = {
+                'todo': 'TODO',
+                'in-progress': 'IN_PROGRESS',
+                'done': 'DONE'
+            };
+
             const response = await fetch(`/api/tasks/${taskId}`, {
                 method: 'PATCH',
                 headers: { 
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${session.token}`
                 },
-                body: JSON.stringify({ status: destinationColumnId }),
+                body: JSON.stringify({ status: statusMap[destinationColumnId] }),
             });
 
-            if (!response.ok) throw new Error('Failed to update task');
-            
-            const updatedTask = await response.json();
-
-            // Update local state to reflect the change
-            updateTasks([updatedTask]);
+            if (!response.ok) {
+                // Revert the optimistic update if API call fails
+                moveTask(taskId, destinationColumnId, sourceColumnId);
+                throw new Error('Failed to update task');
+            }
 
             toast({
                 title: "Task Updated",
@@ -75,7 +87,7 @@ export const KanbanBoard = () => {
     });
 
     return cleanup;
-  }, [board, updateTasks, toast, session]);
+  }, [board, moveTask, toast, session]);
   
   const handleOptimize = async () => {
     setIsOptimizing(true);
@@ -135,7 +147,7 @@ export const KanbanBoard = () => {
                 key={column.id}
                 column={column}
                 tasks={tasks as Task[]}
-                isMobile={true}
+                isMobile={isMobile}
               />
             );
           })}
@@ -151,7 +163,7 @@ export const KanbanBoard = () => {
                 key={column.id}
                 column={column}
                 tasks={tasks as Task[]}
-                isMobile={false}
+                isMobile={isMobile}
               />
             );
           })}
