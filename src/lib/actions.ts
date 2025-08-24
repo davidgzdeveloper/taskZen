@@ -9,7 +9,7 @@ export async function runPrioritizeTasks(tasks: Task[]): Promise<Task[]> {
       tasks: tasks.map(task => ({
         id: task.id,
         title: task.title,
-        description: task.description,
+        description: task.description || undefined,
         priority: task.priority,
         estimatedPomodoros: task.estimatedPomodoros,
         completedPomodoros: task.completedPomodoros,

@@ -9,11 +9,11 @@ import { Sparkles, Loader2 } from "lucide-react";
 import { runPrioritizeTasks } from "@/lib/actions";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Task } from "@/lib/types";
+import { Task, ColumnId } from "@/lib/types";
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 
 export const KanbanBoard = () => {
-  const { board, updateTasks, handleDragEnd } = useAppContext();
+  const { board, updateTasks } = useAppContext();
   const [isOptimizing, setIsOptimizing] = useState(false);
   const { toast } = useToast();
 

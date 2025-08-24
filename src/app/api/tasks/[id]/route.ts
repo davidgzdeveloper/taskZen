@@ -75,23 +75,8 @@ export async function PUT(
 
     const updates: UpdateTaskRequest = await request.json()
     
-    // Transform frontend data to match database schema
-    const transformedUpdates = {
-      ...updates,
-      status: updates.status?.toUpperCase().replace('-', '_') as 'TODO' | 'IN_PROGRESS' | 'DONE',
-      priority: updates.priority?.toUpperCase() as 'LOW' | 'MEDIUM' | 'HIGH',
-    }
-    
-    const task = await TaskService.updateTask(id, userId, transformedUpdates)
-    
-    // Transform task back to frontend format
-    const transformedTask = {
-      ...task,
-      status: task.status.toLowerCase().replace('_', '-') as 'todo' | 'in-progress' | 'done',
-      priority: task.priority.toLowerCase() as 'low' | 'medium' | 'high'
-    }
-    
-    return NextResponse.json(transformedTask)
+    const task = await TaskService.updateTask(id, userId, updates)
+    return NextResponse.json(task)
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message },
