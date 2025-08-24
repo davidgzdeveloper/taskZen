@@ -1,11 +1,12 @@
 [build]
-  command = "npm ci && npm run build"
+  command = "npm ci && npx prisma generate && npm run build"
   publish = ".next"
 
 [build.environment]
   NODE_VERSION = "18"
   NODE_OPTIONS = "--max_old_space_size=4096"
   NPM_FLAGS = "--production=false"
+  PRISMA_CLI_QUERY_ENGINE_TYPE = "binary"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
