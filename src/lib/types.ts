@@ -32,6 +32,7 @@ export interface Task {
   userId: string
   columnOrder: number
   completedPomodoros: number
+  estimatedPomodoros: number
   completedAt?: Date
 }
 
@@ -76,6 +77,7 @@ export interface CreateTaskRequest {
   status?: ColumnId
   priority?: TaskPriority
   dueDate?: string
+  estimatedPomodoros?: number
 }
 
 export interface UpdateTaskRequest {

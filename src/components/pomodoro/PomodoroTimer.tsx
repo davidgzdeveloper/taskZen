@@ -51,7 +51,7 @@ export function PomodoroTimer() {
   const { board, user } = useAppContext();
   const { toast } = useToast();
   const [sessionType, setSessionType] = useState<'work' | 'break'>('work');
-  const [duration, setDuration] = useState(user?.preferences.pomodoroWork || 25);
+  const [duration, setDuration] = useState(user?.preferences?.pomodoroWork || 25);
   const [time, setTime] = useState(duration * 60);
   const [isActive, setIsActive] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | undefined>();
@@ -66,9 +66,9 @@ export function PomodoroTimer() {
   
   const resetTimer = useCallback(() => {
     setIsActive(false);
-    const newTime = (sessionType === 'work' ? duration : user?.preferences.pomodoroBreak || 5) * 60;
+    const newTime = (sessionType === 'work' ? duration : user?.preferences?.pomodoroBreak || 5) * 60;
     setTime(newTime);
-  }, [sessionType, duration, user?.preferences.pomodoroBreak]);
+  }, [sessionType, duration, user?.preferences?.pomodoroBreak]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -81,7 +81,7 @@ export function PomodoroTimer() {
       setIsActive(false);
       const newSessionType = sessionType === 'work' ? 'break' : 'work';
       setSessionType(newSessionType);
-      const newDuration = newSessionType === 'work' ? duration : user?.preferences.pomodoroBreak || 5;
+      const newDuration = newSessionType === 'work' ? duration : user?.preferences?.pomodoroBreak || 5;
       setTime(newDuration * 60);
       toast({
         title: `Time for a ${newSessionType}!`,
@@ -92,7 +92,7 @@ export function PomodoroTimer() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isActive, time, sessionType, duration, user?.preferences.pomodoroBreak, toast]);
+  }, [isActive, time, sessionType, duration, user?.preferences?.pomodoroBreak, toast]);
   
   useEffect(() => {
     resetTimer();

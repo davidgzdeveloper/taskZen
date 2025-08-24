@@ -83,24 +83,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Transform frontend data to match database schema
-    const transformedTaskData = {
-      ...taskData,
-      status: taskData.status?.toUpperCase() as 'TODO' | 'IN_PROGRESS' | 'DONE',
-      priority: taskData.priority?.toUpperCase() as 'LOW' | 'MEDIUM' | 'HIGH',
-      estimatedPomodoros: (taskData as any).estimatedPomodoros || 1
-    }
-
-    const task = await TaskService.createTask(userId, transformedTaskData)
-    
-    // Transform task back to frontend format
-    const transformedTask = {
-      ...task,
-      status: task.status.toLowerCase().replace('_', '-') as 'todo' | 'in-progress' | 'done',
-      priority: task.priority.toLowerCase() as 'low' | 'medium' | 'high'
-    }
-    
-    return NextResponse.json(transformedTask, { status: 201 })
+    const task = await TaskService.createTask(userId, taskData)
+    return NextResponse.json(task, { status: 201 })
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message },

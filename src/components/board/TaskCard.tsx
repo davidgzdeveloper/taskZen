@@ -9,7 +9,7 @@ import { Clock, GripVertical, ArrowLeft, ArrowRight, Play } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { useRef, useEffect, useState } from "react";
 import { draggable } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
-import { useAppContext } from "@/hooks/useAppContext";
+import { useToast } from "@/hooks/use-toast";
 
 const priorityClasses: Record<TaskPriority, string> = {
   high: "border-l-4 border-destructive",
@@ -26,7 +26,7 @@ interface TaskCardProps {
 export function TaskCard({ task, columnId, isMobile = false }: TaskCardProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const { handleDragEnd } = useAppContext();
+  const { toast } = useToast();
 
   useEffect(() => {
     const element = ref.current;
