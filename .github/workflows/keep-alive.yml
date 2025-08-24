@@ -1,0 +1,14 @@
+name: Keep Render App Alive
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"  # Cada 10 minutos
+  workflow_dispatch: # Permite ejecutarlo manualmente también
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render App
+        run: |
+          curl -I https://taskzen-sto0.onrender.com || echo "App no responde"
