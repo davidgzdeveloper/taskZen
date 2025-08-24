@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: taskzen
+    env: node
+    plan: free
+    buildCommand: npm ci && npx prisma generate && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PRISMA_CLI_QUERY_ENGINE_TYPE
+        value: binary
+    # Add your environment variables in the Render dashboard:
+    # - MONGODB_URL
+    # - JWT_SECRET
