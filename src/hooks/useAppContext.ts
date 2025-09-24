@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from '@/contexts/AuthContext';
+import { Task } from '@/lib/types';
 
 export const useAppContext = () => {
   const context = useAuth();
