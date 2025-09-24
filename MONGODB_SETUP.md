@@ -126,3 +126,6 @@ The system uses JWT tokens for authentication:
 - **Token Expiration**: JWT tokens expire after 7 days
 - **HTTPS**: Always use HTTPS in production for secure token transmission
 
+
+
+

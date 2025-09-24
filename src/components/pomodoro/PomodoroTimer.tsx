@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAppContext } from "@/hooks/useAppContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Task } from "@/lib/types";
 import { Play, Pause, RotateCcw } from "lucide-react";
 import React, { useState, useEffect, useMemo, useCallback } from "react";
@@ -48,7 +49,8 @@ const CircleProgress = ({ progress, isMobile = false }: { progress: number, isMo
 };
 
 export function PomodoroTimer() {
-  const { board, user } = useAppContext();
+  const { board, user, updateTask: updateAppContextTask } = useAppContext();
+  const { session } = useAuth();
   const { toast } = useToast();
   const [sessionType, setSessionType] = useState<'work' | 'break'>('work');
   const [duration, setDuration] = useState(user?.preferences?.pomodoroWork || 25);
@@ -57,6 +59,55 @@ export function PomodoroTimer() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | undefined>();
 
   const tasks = useMemo(() => Object.values(board.tasks).filter(t => t.status !== 'done'), [board.tasks]) as Task[];
+
+  const handlePomodoroCompletion = async () => {
+    if (!selectedTaskId || !session) return;
+
+    const task = board.tasks[selectedTaskId];
+    if (!task) return;
+
+    const newCompletedPomodoros = (task.completedPomodoros || 0) + 1;
+
+    try {
+      // Update backend
+      const response = await fetch(`/api/tasks/${selectedTaskId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.token}`,
+        },
+        body: JSON.stringify({ completedPomodoros: newCompletedPomodoros }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update task on the server');
+      }
+
+      const updatedTask = await response.json();
+
+      // Update local context immediately
+      if (updateAppContextTask) {
+        updateAppContextTask(selectedTaskId, updatedTask);
+      }
+
+      toast({
+        title: "Pomodoro Completed!",
+        description: `One pomodoro for "${task.title}" has been registered.`,
+      });
+
+    } catch (error) {
+      console.error("Failed to update task:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save pomodoro session.",
+        variant: "destructive",
+      });
+      // Optionally, revert the optimistic update in context
+      if (updateAppContextTask) {
+        updateAppContextTask(selectedTaskId, { completedPomodoros: task.completedPomodoros });
+      }
+    }
+  };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -78,21 +129,34 @@ export function PomodoroTimer() {
       }, 1000);
     } else if (isActive && time === 0) {
       // Session finished
-      setIsActive(false);
+      if (sessionType === 'work') {
+        handlePomodoroCompletion();
+      }
+
       const newSessionType = sessionType === 'work' ? 'break' : 'work';
       setSessionType(newSessionType);
-      const newDuration = newSessionType === 'work' ? duration : user?.preferences?.pomodoroBreak || 5;
-      setTime(newDuration * 60);
+      
+      if (newSessionType === 'break') {
+        // Automatically start the break
+        const newDuration = user?.preferences?.pomodoroBreak || 5;
+        setTime(newDuration * 60);
+        setIsActive(true); // Keep it active for the break
+      } else {
+        // Work session after a break, stop the timer
+        const newDuration = duration;
+        setTime(newDuration * 60);
+        setIsActive(false); // Stop the timer
+      }
+
       toast({
         title: `Time for a ${newSessionType}!`,
         description: `Your ${sessionType} session has ended.`,
       });
-      // In a real app, here you would save the session and update task pomodoros
     }
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isActive, time, sessionType, duration, user?.preferences?.pomodoroBreak, toast]);
+  }, [isActive, time, sessionType, duration, user?.preferences?.pomodoroBreak, toast, selectedTaskId]);
   
   useEffect(() => {
     resetTimer();
@@ -139,20 +203,20 @@ export function PomodoroTimer() {
                 {/* Preset Buttons - responsive layout */}
                 <div className={`${isMobile ? 'flex flex-col gap-2 w-full' : 'flex gap-2'}`}>
                     <Button 
-                      variant={duration === 25 ? 'default' : 'secondary'} 
-                      onClick={() => setPreset(25, 5)}
-                      className={isMobile ? 'text-sm' : ''}
-                      size={isMobile ? 'sm' : 'default'}
-                    >
-                      Standard (25/5)
-                    </Button>
-                    <Button 
                       variant={duration === 15 ? 'default' : 'secondary'} 
                       onClick={() => setPreset(15, 3)}
                       className={isMobile ? 'text-sm' : ''}
                       size={isMobile ? 'sm' : 'default'}
                     >
                       Short (15/3)
+                    </Button>
+                    <Button 
+                      variant={duration === 25 ? 'default' : 'secondary'} 
+                      onClick={() => setPreset(25, 5)}
+                      className={isMobile ? 'text-sm' : ''}
+                      size={isMobile ? 'sm' : 'default'}
+                    >
+                      Standard (25/5)
                     </Button>
                     <Button 
                       variant={duration === 45 ? 'default' : 'secondary'} 

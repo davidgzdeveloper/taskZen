@@ -86,6 +86,7 @@ export interface UpdateTaskRequest {
   status?: ColumnId
   priority?: TaskPriority
   dueDate?: string
+  completedPomodoros?: number
 }
 
 export interface CreateProfileRequest {

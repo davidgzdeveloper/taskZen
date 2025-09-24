@@ -36,7 +36,7 @@ interface AuthContextType {
   // App state management
   board: BoardState
   addTask: (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'userId' | 'columnOrder' | 'status' | 'completedPomodoros'>, userId: string) => Promise<void>
-  updateTask: (task: Task) => void
+  updateTask: (taskId: string, updates: Partial<Task>) => void
   updateTasks: (tasks: Task[]) => void
   moveTask: (taskId: string, sourceColumn: ColumnId, destinationColumn: ColumnId) => void
   handleDragEnd: (event: any) => Promise<void>
@@ -358,11 +358,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateTask = (updatedTask: Task) => {
+  const updateTask = (taskId: string, updates: Partial<Task>) => {
     setBoard(prevBoard => {
       const newTasks = {
         ...prevBoard.tasks,
-        [updatedTask.id]: updatedTask,
+        [taskId]: {
+          ...prevBoard.tasks[taskId],
+          ...updates,
+        },
       };
       return { ...prevBoard, tasks: newTasks };
     });

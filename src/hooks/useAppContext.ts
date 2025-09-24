@@ -7,7 +7,7 @@ export const useAppContext = () => {
   return {
     board: context.board,
     addTask: context.addTask as (taskData: any, userId: string) => Promise<void>,
-    updateTask: context.updateTask,
+    updateTask: context.updateTask as (taskId: string, updates: Partial<Task>) => void,
     updateTasks: context.updateTasks,
     moveTask: context.moveTask,
     user: context.user,
