@@ -20,7 +20,9 @@ export function PriorityPieChart({ tasks }: PriorityPieChartProps) {
     const data = useMemo(() => {
         const counts = { high: 0, medium: 0, low: 0 };
         tasks.forEach(task => {
-            counts[task.priority]++;
+            if (task.priority) {
+                counts[task.priority]++;
+            }
         });
         return [
             { name: 'High', value: counts.high, fill: COLORS.high },
@@ -47,9 +49,10 @@ export function PriorityPieChart({ tasks }: PriorityPieChartProps) {
     <Card>
       <CardHeader>
         <CardTitle>Task Priority Distribution</CardTitle>
+        <CardDescription>A breakdown of tasks by their priority level.</CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={{}} className="h-64 w-full">
+        <ChartContainer config={{}} className="h-80 w-full">
             <ResponsiveContainer>
                 <PieChart>
                     <Tooltip content={<ChartTooltipContent />} />
@@ -59,7 +62,8 @@ export function PriorityPieChart({ tasks }: PriorityPieChartProps) {
                         nameKey="name"
                         cx="50%"
                         cy="50%"
-                        outerRadius={80}
+                        innerRadius={90}
+                        outerRadius={120}
                         labelLine={false}
                         label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
                             const radius = innerRadius + (outerRadius - innerRadius) * 0.5;

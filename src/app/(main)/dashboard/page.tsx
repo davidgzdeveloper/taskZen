@@ -7,15 +7,24 @@ import { StatsCard } from "@/components/dashboard/StatsCard";
 import { useAppContext } from "@/hooks/useAppContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Task, DashboardStats } from "@/lib/types";
-import { CheckCircle2, Target, Trophy, Clock } from "lucide-react";
+import { CheckCircle2, Target, Trophy, Clock, Calendar as CalendarIcon } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
-import { format, isToday, parseISO } from 'date-fns';
+import { format, isToday, parseISO, subDays } from 'date-fns';
+import { DateRange } from "react-day-picker";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export default function DashboardPage() {
   const { board } = useAppContext();
   const { user, session } = useAuth();
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [date, setDate] = useState<DateRange | undefined>({
+    from: subDays(new Date(), 7),
+    to: new Date(),
+  });
   
   const tasks = useMemo(() => Object.values(board.tasks), [board.tasks]);
   
@@ -54,8 +63,8 @@ export default function DashboardPage() {
     return () => {
       isMounted = false;
     };
-  }, [session]); // Only depend on session, not tasks.length to avoid multiple calls
-  
+  }, [session]);
+
   // Reload stats when tasks change significantly (but debounced)
   useEffect(() => {
     if (!session || loading) return;
@@ -88,16 +97,19 @@ export default function DashboardPage() {
     const activityMap: { [key: string]: { date: string; tasksCompleted: number; pomodorosCompleted: number } } = {};
     tasks.forEach(task => {
       if (task.completedAt) {
-        const date = format(new Date(task.completedAt), 'yyyy-MM-dd');
-        if (!activityMap[date]) {
-          activityMap[date] = { date, tasksCompleted: 0, pomodorosCompleted: 0 };
+        const completedDate = new Date(task.completedAt);
+        if (date?.from && date?.to && completedDate >= date.from && completedDate <= date.to) {
+          const dateStr = format(completedDate, 'yyyy-MM-dd');
+          if (!activityMap[dateStr]) {
+            activityMap[dateStr] = { date: dateStr, tasksCompleted: 0, pomodorosCompleted: 0 };
+          }
+          activityMap[dateStr].tasksCompleted += 1;
+          activityMap[dateStr].pomodorosCompleted += task.completedPomodoros || 0;
         }
-        activityMap[date].tasksCompleted += 1;
-        activityMap[date].pomodorosCompleted += task.completedPomodoros || 0;
       }
     });
     return Object.values(activityMap).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [tasks]);
+  }, [tasks, date]);
 
   if (loading) {
     return (
@@ -149,8 +161,46 @@ export default function DashboardPage() {
           <div className="text-2xl font-bold">{dashboardStats?.completedTasks || 0}</div>
         </div>
       </div>
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <ActivityChart data={activityData} />
+      <div className="flex items-center gap-2">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              id="date"
+              variant={"outline"}
+              className={cn(
+                "w-[300px] justify-start text-left font-normal",
+                !date && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {date?.from ? (
+                date.to ? (
+                  <>
+                    {format(date.from, "LLL dd, y")} -{" "}
+                    {format(date.to, "LLL dd, y")}
+                  </>
+                ) : (
+                  format(date.from, "LLL dd, y")
+                )
+              ) : (
+                <span>Pick a date</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              initialFocus
+              mode="range"
+              defaultMonth={date?.from}
+              selected={date}
+              onSelect={setDate}
+              numberOfMonths={2}
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-1 mt-6">
+        <ActivityChart data={activityData} dateRange={date} />
         <PriorityPieChart tasks={tasks as Task[]} />
       </div>
       <div>

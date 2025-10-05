@@ -7,7 +7,7 @@ import { useAppContext } from "@/hooks/useAppContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Task } from "@/lib/types";
 import { Play, Pause, RotateCcw } from "lucide-react";
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 const CircleProgress = ({ progress, isMobile = false }: { progress: number, isMobile?: boolean }) => {
@@ -57,6 +57,11 @@ export function PomodoroTimer() {
   const [time, setTime] = useState(duration * 60);
   const [isActive, setIsActive] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | undefined>();
+  const alarmAudio = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    alarmAudio.current = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3');
+  }, []);
 
   const tasks = useMemo(() => Object.values(board.tasks).filter(t => t.status !== 'done'), [board.tasks]) as Task[];
 
@@ -129,6 +134,8 @@ export function PomodoroTimer() {
       }, 1000);
     } else if (isActive && time === 0) {
       // Session finished
+      alarmAudio.current?.play();
+
       if (sessionType === 'work') {
         handlePomodoroCompletion();
       }

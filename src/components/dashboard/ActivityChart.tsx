@@ -1,8 +1,11 @@
 "use client"
 
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
+import { Line, LineChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartTooltipContent, ChartConfig, ChartContainer } from "@/components/ui/chart"
+import { useMemo } from "react"
+import { DateRange } from "react-day-picker"
+import { format } from "date-fns"
 
 const chartConfig = {
   tasksCompleted: {
@@ -21,23 +24,34 @@ interface ActivityChartProps {
     tasksCompleted: number
     pomodorosCompleted: number
   }[]
+  dateRange: DateRange | undefined
 }
 
-export function ActivityChart({ data }: ActivityChartProps) {
+export function ActivityChart({ data, dateRange }: ActivityChartProps) {
   const chartData = data.map(item => ({
     ...item,
-    date: new Date(item.date).toLocaleDateString('en-US', { weekday: 'short' }),
+    date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
   }));
+
+  const title = useMemo(() => {
+    if (dateRange?.from && dateRange?.to) {
+      if (format(dateRange.from, "LLL dd, y") === format(dateRange.to, "LLL dd, y")) {
+        return `Activity for ${format(dateRange.from, "LLL dd, y")}`;
+      }
+      return `Activity from ${format(dateRange.from, "LLL dd, y")} to ${format(dateRange.to, "LLL dd, y")}`;
+    }
+    return "Activity";
+  }, [dateRange]);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Last 7 Days Activity</CardTitle>
+        <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig} className="h-64 w-full">
+        <ChartContainer config={chartConfig} className="h-80 w-full">
             <ResponsiveContainer>
-                <BarChart data={chartData}>
+                <LineChart data={chartData}>
                     <CartesianGrid vertical={false} />
                     <XAxis
                         dataKey="date"
@@ -48,9 +62,9 @@ export function ActivityChart({ data }: ActivityChartProps) {
                     />
                     <YAxis />
                     <Tooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="tasksCompleted" fill="var(--color-tasksCompleted)" radius={4} />
-                    <Bar dataKey="pomodorosCompleted" fill="var(--color-pomodorosCompleted)" radius={4} />
-                </BarChart>
+                    <Line type="monotone" dataKey="tasksCompleted" stroke="var(--color-tasksCompleted)" strokeWidth={2} />
+                    <Line type="monotone" dataKey="pomodorosCompleted" stroke="var(--color-pomodorosCompleted)" strokeWidth={2} />
+                </LineChart>
             </ResponsiveContainer>
         </ChartContainer>
       </CardContent>
