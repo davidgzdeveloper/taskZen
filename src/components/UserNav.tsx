@@ -13,9 +13,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 import { LogOut, User as UserIcon, Settings, CreditCard } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function UserNav() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading } = useAuth();
+
+  if (loading) {
+    return <Skeleton className="h-8 w-8 rounded-full" />;
+  }
 
   if (!user) {
     return null;
