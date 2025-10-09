@@ -9,3 +9,6 @@
 
 ### Pomodoro Timer Alarm
 - ✅ Added an alarm sound to the Pomodoro Timer when a session finishes.
+
+## Pending Tasks
+- Crear una landing page llamativa
