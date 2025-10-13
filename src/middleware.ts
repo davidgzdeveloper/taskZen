@@ -4,6 +4,11 @@ import type { NextRequest } from 'next/server'
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Skip middleware for static files (anything with a file extension)
+  if (pathname.includes('.')) {
+    return NextResponse.next();
+  }
+
   // Redirect /landing to the root page for consolidation
   if (pathname === '/landing') {
     return NextResponse.redirect(new URL('/', request.url));
