@@ -1,30 +1,22 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // External packages that should not be bundled (moved from experimental)
+  // Server-only packages used by Genkit that should not be bundled
   serverExternalPackages: [
     '@genkit-ai/core',
-    '@genkit-ai/firebase', 
     '@opentelemetry/sdk-node',
-    'handlebars'
+    'handlebars',
   ],
 
-  // Performance optimizations
   compress: true,
   poweredByHeader: false,
-  
-  // For better compatibility with Netlify
   trailingSlash: false,
-  
-  // TypeScript configuration
+
   typescript: {
-    // Disable type checking during build (we'll handle it separately)
     ignoreBuildErrors: false,
   },
-  
-  // ESLint configuration
   eslint: {
     ignoreDuringBuilds: false,
   },
-}
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;

@@ -52,7 +52,7 @@ async function main() {
     prisma.task.create({
       data: {
         title: 'Implement authentication',
-        description: 'Set up user authentication with Supabase',
+        description: 'Implement JWT authentication with bcrypt password hashing',
         status: 'DONE',
         priority: 'HIGH',
         userId: user.id,

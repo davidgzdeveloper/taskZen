@@ -3,7 +3,7 @@
   publish = ".next"
 
 [build.environment]
-  NODE_VERSION = "18"
+  NODE_VERSION = "20"
   NODE_OPTIONS = "--max_old_space_size=4096"
   NPM_FLAGS = "--production=false"
   PRISMA_CLI_QUERY_ENGINE_TYPE = "binary"
@@ -13,17 +13,4 @@
 
 [functions]
   node_bundler = "esbuild"
-  external_node_modules = ["@genkit-ai/core", "@genkit-ai/firebase", "handlebars"]
-
-# Handle client-side routing
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  conditions = {Role = ["admin", "editor", "user"]}
-
-# API routes should not redirect
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
+  external_node_modules = ["@genkit-ai/core", "handlebars"]
