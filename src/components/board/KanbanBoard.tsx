@@ -12,6 +12,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Task, ColumnId } from "@/lib/types";
+import { LayoutGroup } from "framer-motion";
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 
 export const KanbanBoard = () => {
@@ -43,8 +44,8 @@ export const KanbanBoard = () => {
         try {
             if (!session) {
                 toast({
-                    title: "Authentication Error",
-                    description: "Please log in to update tasks.",
+                    title: "Sesión caducada",
+                    description: "Inicia sesión de nuevo para mover tareas.",
                     variant: "destructive",
                 });
                 return;
@@ -73,13 +74,12 @@ export const KanbanBoard = () => {
             }
 
             toast({
-                title: "Task Updated",
-                description: "Task moved to the new column.",
+                title: "Tarea movida",
             });
         } catch (error) {
             toast({
-                title: "Update Failed",
-                description: "Could not move the task.",
+                title: "No se pudo mover la tarea",
+                description: "La tarea ha vuelto a su columna. Inténtalo de nuevo.",
                 variant: "destructive",
             });
         }
@@ -97,13 +97,13 @@ export const KanbanBoard = () => {
       const prioritizedTasks = await runPrioritizeTasks(tasksToPrioritize as Task[]);
       updateTasks(prioritizedTasks as Task[]);
       toast({
-        title: "Tasks Optimized!",
-        description: "Your 'To Do' list has been prioritized by AI.",
+        title: "Por hacer ordenado",
+        description: "Las tareas están ordenadas por urgencia y esfuerzo.",
       });
     } catch (error) {
       toast({
-        title: "Optimization Failed",
-        description: "Could not prioritize tasks at this time.",
+        title: "No se pudo ordenar",
+        description: "La IA no respondió. Tus tareas siguen en el mismo orden.",
         variant: "destructive",
       });
     } finally {
@@ -114,8 +114,7 @@ export const KanbanBoard = () => {
   return (
     <div className="flex flex-col h-full">
       {/* Header - responsive */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold">Kanban Board</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-4 mb-6">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <Button 
             variant="outline" 
@@ -128,17 +127,15 @@ export const KanbanBoard = () => {
             ) : (
               <Sparkles className="mr-2 h-4 w-4" />
             )}
-            <span className="hidden sm:inline">Optimize with AI</span>
-            <span className="sm:hidden">AI Optimize</span>
+            Ordenar Por hacer con IA
           </Button>
           <CreateTaskDialog />
         </div>
       </div>
 
-      {/* Board - responsive layout */}
-      <div className="flex-1 overflow-hidden">
-        {/* Mobile: Vertical stack */}
-        <div className="block md:hidden space-y-6">
+      {/* Board: stacked on mobile, side by side from md up. One tree so card layout animations have unique ids. */}
+      <LayoutGroup>
+        <div className={isMobile ? "space-y-6" : "flex h-full gap-4 overflow-x-auto pb-4 lg:gap-6"}>
           {board.columnOrder.map(columnId => {
             const column = board.columns[columnId];
             const tasks = column.taskIds.map(taskId => board.tasks[taskId]);
@@ -152,23 +149,7 @@ export const KanbanBoard = () => {
             );
           })}
         </div>
-        
-        {/* Tablet & Desktop: Horizontal layout */}
-        <div className="hidden md:flex md:gap-4 lg:gap-6 h-full overflow-x-auto pb-4">
-          {board.columnOrder.map(columnId => {
-            const column = board.columns[columnId];
-            const tasks = column.taskIds.map(taskId => board.tasks[taskId]);
-            return (
-              <KanbanColumn
-                key={column.id}
-                column={column}
-                tasks={tasks as Task[]}
-                isMobile={isMobile}
-              />
-            );
-          })}
-        </div>
-      </div>
+      </LayoutGroup>
     </div>
   );
 }

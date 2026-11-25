@@ -1,52 +1,23 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAppContext } from "@/hooks/useAppContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Task } from "@/lib/types";
-import { Play, Pause, RotateCcw } from "lucide-react";
+import { Play, Pause, RotateCcw, Moon } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ZenMode } from "./ZenMode";
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { PomodoroPips } from "@/components/PomodoroPips";
+import { cn } from "@/lib/utils";
 
-const CircleProgress = ({ progress, isMobile = false }: { progress: number, isMobile?: boolean }) => {
-  const strokeWidth = isMobile ? 6 : 8;
-  const radius = isMobile ? 70 : 90;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (progress / 100) * circumference;
-  const size = isMobile ? 180 : 200;
-
-  return (
-    <div className={`relative ${isMobile ? 'w-44 h-44' : 'w-56 h-56'}`}>
-      <svg className="w-full h-full" viewBox={`0 0 ${size} ${size}`}>
-        <circle
-          className="text-muted"
-          stroke="currentColor"
-          strokeWidth={strokeWidth}
-          fill="transparent"
-          r={radius}
-          cx={size/2}
-          cy={size/2}
-        />
-        <circle
-          className="text-primary transition-all duration-300"
-          stroke="currentColor"
-          strokeWidth={strokeWidth}
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          fill="transparent"
-          r={radius}
-          cx={size/2}
-          cy={size/2}
-          transform={`rotate(-90 ${size/2} ${size/2})`}
-        />
-      </svg>
-      
-    </div>
-  );
-};
+const presets = [
+  { work: 15, break: 3 },
+  { work: 25, break: 5 },
+  { work: 45, break: 10 },
+];
 
 export function PomodoroTimer() {
   const { board, user, updateTask: updateAppContextTask } = useAppContext();
@@ -57,6 +28,12 @@ export function PomodoroTimer() {
   const [time, setTime] = useState(duration * 60);
   const [isActive, setIsActive] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | undefined>();
+  const [zen, setZen] = useState(false);
+
+  // /timer?zen=1 opens straight into zen mode (linked from the dashboard).
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('zen') === '1') setZen(true);
+  }, []);
   const alarmAudio = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -96,15 +73,15 @@ export function PomodoroTimer() {
       }
 
       toast({
-        title: "Pomodoro Completed!",
-        description: `One pomodoro for "${task.title}" has been registered.`,
+        title: "Pomodoro completado",
+        description: `Sumado a "${task.title}".`,
       });
 
     } catch (error) {
       console.error("Failed to update task:", error);
       toast({
-        title: "Error",
-        description: "Failed to save pomodoro session.",
+        title: "No se pudo guardar el Pomodoro",
+        description: "La sesión terminó, pero no se sumó a la tarea. Comprueba tu conexión.",
         variant: "destructive",
       });
       // Optionally, revert the optimistic update in context
@@ -156,8 +133,8 @@ export function PomodoroTimer() {
       }
 
       toast({
-        title: `Time for a ${newSessionType}!`,
-        description: `Your ${sessionType} session has ended.`,
+        title: newSessionType === 'break' ? 'Hora de descansar' : 'Descanso terminado',
+        description: newSessionType === 'break' ? 'El descanso ya está en marcha.' : 'Pulsa Iniciar cuando quieras volver al foco.',
       });
     }
     return () => {
@@ -174,103 +151,132 @@ export function PomodoroTimer() {
     // This will trigger the useEffect to reset the timer
   };
 
-  const progress = ((duration * 60 - time) / (duration * 60)) * 100;
-
-  // Detect mobile using screen size
-  const [isMobile, setIsMobile] = useState(false);
-  
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768); // md breakpoint
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  const sessionLength = (sessionType === 'work' ? duration : user?.preferences?.pomodoroBreak || 5) * 60;
+  const progress = ((sessionLength - time) / sessionLength) * 100;
+  const selectedTask = selectedTaskId ? board.tasks[selectedTaskId] : undefined;
+  const isBreak = sessionType === 'break';
 
   return (
-    <div className="flex items-center justify-center p-4">
-        <Card className={`w-full ${isMobile ? 'max-w-sm' : 'max-w-md'}`}>
-            <CardHeader className={isMobile ? 'pb-4' : ''}>
-                <CardTitle className={`text-center ${isMobile ? 'text-xl' : 'text-2xl'}`}>
-                    {sessionType === 'work' ? 'Focus Session' : 'Time for a Break'}
-                </CardTitle>
-            </CardHeader>
-            <CardContent className={`flex flex-col items-center ${isMobile ? 'gap-4' : 'gap-6'}`}>
-                <div className="relative">
-                    <CircleProgress progress={progress} isMobile={isMobile} />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <span className={`${isMobile ? 'text-3xl' : 'text-5xl'} font-bold font-mono text-foreground`}>
-                          {formatTime(time)}
-                        </span>
-                    </div>
-                </div>
-                
-                {/* Preset Buttons - responsive layout */}
-                <div className={`${isMobile ? 'flex flex-col gap-2 w-full' : 'flex gap-2'}`}>
-                    <Button 
-                      variant={duration === 15 ? 'default' : 'secondary'} 
-                      onClick={() => setPreset(15, 3)}
-                      className={isMobile ? 'text-sm' : ''}
-                      size={isMobile ? 'sm' : 'default'}
-                    >
-                      Short (15/3)
-                    </Button>
-                    <Button 
-                      variant={duration === 25 ? 'default' : 'secondary'} 
-                      onClick={() => setPreset(25, 5)}
-                      className={isMobile ? 'text-sm' : ''}
-                      size={isMobile ? 'sm' : 'default'}
-                    >
-                      Standard (25/5)
-                    </Button>
-                    <Button 
-                      variant={duration === 45 ? 'default' : 'secondary'} 
-                      onClick={() => setPreset(45, 10)}
-                      className={isMobile ? 'text-sm' : ''}
-                      size={isMobile ? 'sm' : 'default'}
-                    >
-                      Long (45/10)
-                    </Button>
-                </div>
+    <div className="mx-auto flex max-w-xl flex-col items-center py-6 text-center sm:py-10">
+      <motion.p
+        key={sessionType}
+        initial={{ opacity: 0, y: -6 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={cn("text-lg font-semibold", isBreak ? "text-done" : "text-muted-foreground")}
+      >
+        {isBreak ? 'Descanso' : 'Sesión de foco'}
+      </motion.p>
 
-                {/* Task Selection */}
-                <div className="w-full">
-                    <Select value={selectedTaskId} onValueChange={setSelectedTaskId}>
-                        <SelectTrigger className={isMobile ? 'text-sm' : ''}>
-                            <SelectValue placeholder={isMobile ? "Select task (optional)" : "Select a task to focus on (optional)"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {tasks.map(task => (
-                                <SelectItem key={task.id} value={task.id}>{task.title}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
+      <p
+        role="timer"
+        aria-live="off"
+        className="numeral mt-2 text-[6.5rem] font-bold leading-none sm:text-[10rem]"
+      >
+        {formatTime(time)}
+      </p>
 
-                {/* Control Buttons */}
-                <div className={`${isMobile ? 'flex flex-col gap-2 w-full' : 'flex gap-4'}`}>
-                    <Button 
-                      size={isMobile ? 'default' : 'lg'} 
-                      onClick={() => setIsActive(!isActive)} 
-                      className={isMobile ? 'w-full' : 'w-32'}
-                    >
-                        {isActive ? <Pause className="mr-2" /> : <Play className="mr-2" />}
-                        {isActive ? 'Pause' : 'Start'}
-                    </Button>
-                    <Button 
-                      size={isMobile ? 'default' : 'lg'} 
-                      variant="outline" 
-                      onClick={resetTimer}
-                      className={isMobile ? 'w-full' : ''}
-                    >
-                        <RotateCcw className="mr-2" />
-                        Reset
-                    </Button>
-                </div>
-            </CardContent>
-        </Card>
+      <div
+        role="progressbar"
+        aria-label="Progreso de la sesión"
+        aria-valuenow={Math.round(progress)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        className="mt-6 h-1.5 w-full max-w-sm overflow-hidden rounded-full bg-muted"
+      >
+        <div
+          className={cn("h-full rounded-full transition-[width] duration-1000 ease-linear", isBreak ? "bg-done" : "bg-focus")}
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+
+      <div className="mt-8 flex w-full max-w-sm flex-col gap-2 sm:flex-row">
+        <Button size="lg" onClick={() => setIsActive(!isActive)} className="h-12 flex-1 text-base">
+          {isActive ? <Pause className="mr-2 h-5 w-5" /> : <Play className="mr-2 h-5 w-5" />}
+          {isActive ? 'Pausar' : 'Iniciar'}
+        </Button>
+        <Button size="lg" variant="outline" onClick={resetTimer} className="h-12 text-base">
+          <RotateCcw className="mr-2 h-4 w-4" />
+          Reiniciar
+        </Button>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setZen(true)}
+        className="mt-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      >
+        <Moon className="h-4 w-4" />
+        Modo zen: pantalla completa, sin distracciones
+      </button>
+
+      <AnimatePresence>
+        {zen && (
+          <ZenMode
+            time={formatTime(time)}
+            isActive={isActive}
+            isBreak={isBreak}
+            progress={progress}
+            task={selectedTask}
+            onToggle={() => setIsActive(a => !a)}
+            onExit={() => setZen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      <div className="mt-12 w-full max-w-sm space-y-6 text-left">
+        <div className="space-y-2">
+          <p id="task-label" className="text-sm font-medium">Tarea</p>
+          <Select value={selectedTaskId} onValueChange={setSelectedTaskId}>
+            <SelectTrigger aria-labelledby="task-label" className="h-11">
+              <SelectValue placeholder="Elige en qué vas a trabajar (opcional)" />
+            </SelectTrigger>
+            <SelectContent>
+              {tasks.map(task => (
+                <SelectItem key={task.id} value={task.id}>{task.title}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {selectedTask ? (
+            <div className="flex items-center gap-2 pt-1 text-sm text-muted-foreground">
+              <PomodoroPips
+                done={selectedTask.completedPomodoros || 0}
+                total={selectedTask.estimatedPomodoros || 1}
+                running={isActive && !isBreak}
+              />
+              <span className="digits">
+                {selectedTask.completedPomodoros || 0} de {selectedTask.estimatedPomodoros}
+              </span>
+            </div>
+          ) : (
+            <p className="pt-1 text-sm text-muted-foreground">
+              Si eliges una tarea, cada sesión terminada se suma a sus Pomodoros.
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <p id="preset-label" className="text-sm font-medium">Duración</p>
+          <div role="radiogroup" aria-labelledby="preset-label" className="grid grid-cols-3 gap-1 rounded-lg bg-muted p-1">
+            {presets.map((preset) => (
+              <button
+                key={preset.work}
+                type="button"
+                role="radio"
+                aria-checked={duration === preset.work}
+                onClick={() => setPreset(preset.work, preset.break)}
+                className={cn(
+                  "rounded-md px-2 py-2.5 transition-colors",
+                  duration === preset.work
+                    ? "bg-card font-semibold text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <span className="digits text-base">{preset.work} min</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

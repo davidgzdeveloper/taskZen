@@ -17,9 +17,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        body: ['Inter', 'sans-serif'],
-        headline: ['Inter', 'sans-serif'],
-        code: ['monospace'],
+        body: ["var(--font-bricolage)", "system-ui", "sans-serif"],
+        headline: ["var(--font-bricolage)", "system-ui", "sans-serif"],
+        code: ["ui-monospace", "monospace"],
       },
       colors: {
         background: 'hsl(var(--background))',
@@ -52,6 +52,11 @@ export default {
           DEFAULT: 'hsl(var(--destructive))',
           foreground: 'hsl(var(--destructive-foreground))',
         },
+        focus: {
+          DEFAULT: 'hsl(var(--focus))',
+          foreground: 'hsl(var(--focus-foreground))',
+        },
+        done: 'hsl(var(--done))',
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
@@ -79,6 +84,19 @@ export default {
         sm: 'calc(var(--radius) - 4px)',
       },
       keyframes: {
+        'pip-fill': {
+          '0%': { transform: 'scale(0.4)', opacity: '0' },
+          '60%': { transform: 'scale(1.25)', opacity: '1' },
+          '100%': { transform: 'scale(1)' },
+        },
+        rise: {
+          from: { transform: 'translateY(0.6em)', opacity: '0' },
+          to: { transform: 'translateY(0)', opacity: '1' },
+        },
+        breathe: {
+          '0%, 100%': { transform: 'scale(0.86)', opacity: '0.55' },
+          '50%': { transform: 'scale(1)', opacity: '1' },
+        },
         'accordion-down': {
           from: {
             height: '0',
@@ -97,6 +115,9 @@ export default {
         },
       },
       animation: {
+        'pip-fill': 'pip-fill 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both',
+        breathe: 'breathe 8s ease-in-out infinite',
+        rise: 'rise 700ms cubic-bezier(0.22, 1, 0.36, 1) both',
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
       },

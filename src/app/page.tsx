@@ -1,200 +1,137 @@
-
-'use client';
-
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { GanttChartSquare, Timer, BarChart } from 'lucide-react';
+import { AppLogo } from '@/components/AppLogo';
+import { HeroDemo } from '@/components/landing/HeroDemo';
+import { PomodoroPips } from '@/components/PomodoroPips';
+import { ZenPreview } from '@/components/landing/ZenPreview';
+
+const steps = [
+  {
+    title: 'Planifica en el tablero',
+    body: 'Crea tus tareas, estima cuántos Pomodoros te llevará cada una y arrástralas entre Por hacer, En curso y Hecho. Si no sabes por dónde empezar, la IA ordena tu columna Por hacer por urgencia y esfuerzo.',
+    visual: (
+      <div className="flex flex-col gap-1.5">
+        <PomodoroPips done={0} total={3} size="sm" />
+        <PomodoroPips done={0} total={5} size="sm" />
+        <PomodoroPips done={0} total={2} size="sm" />
+      </div>
+    ),
+  },
+  {
+    title: 'Enfócate con el temporizador',
+    body: 'Elige una tarea y arranca una sesión de 15, 25 o 45 minutos, o entra en modo zen para que no quede nada más en pantalla. Al terminar, el Pomodoro se suma a esa tarea y empieza el descanso.',
+    visual: <PomodoroPips done={2} total={4} size="md" running />,
+  },
+  {
+    title: 'Revisa lo que terminaste',
+    body: 'El panel muestra las tareas completadas, los Pomodoros de cada día y cómo se reparte tu trabajo por prioridad.',
+    visual: <PomodoroPips done={4} total={4} size="md" />,
+  },
+];
 
 export default function LandingPage() {
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground">
-      {/* Header */}
-      <header className="px-4 lg:px-6 h-14 flex items-center sticky top-0 z-50 bg-background/95 backdrop-blur-sm">
-        <Link href="#" className="flex items-center justify-center" prefetch={false}>
-          <GanttChartSquare className="h-6 w-6 text-primary" />
-          <span className="ml-2 text-xl font-bold">TaskZen</span>
+    <div className="flex min-h-screen flex-col">
+      <header className="mx-auto flex h-16 w-full max-w-6xl items-center px-4 sm:px-6">
+        <Link href="/" aria-label="TaskZen, inicio">
+          <AppLogo />
         </Link>
-        <nav className="ml-auto flex items-center gap-4 sm:gap-6">
+        <nav className="ml-auto flex items-center gap-2">
           <Button asChild variant="ghost">
-            <Link href="/login" prefetch={false}>Iniciar Sesión</Link>
+            <Link href="/login">Iniciar sesión</Link>
           </Button>
           <Button asChild>
-            <Link href="/signup" prefetch={false}>Registrarse</Link>
+            <Link href="/signup">Crear cuenta</Link>
           </Button>
         </nav>
       </header>
 
       <main className="flex-1">
-        {/* Hero Section */}
-        <section className="w-full pt-4 pb-20 md:pt-6 md:pb-32 lg:pt-8 lg:pb-40 xl:pt-10 xl:pb-56 text-center">
-          <div className="container px-4 md:px-6">
-            <div className="max-w-3xl mx-auto space-y-8">
-              <motion.div
-                className="flex justify-center mb-8"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-              >
-                <img
-                  src="/logo.png"
-                  alt="TaskZen Logo"
-                  className="w-auto h-auto max-w-[200px] md:max-w-[300px]"
-                />
-              </motion.div>
-              <motion.h1
-                className="text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-              >
-                Organiza Tu Vida, Alcanza Tus Metas
-              </motion.h1>
-              <motion.p
-                className="text-lg text-muted-foreground md:text-xl"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.4 }}
-              >
-                TaskZen es la herramienta definitiva para la productividad y la gestión de tareas. Deja de hacer malabares con las aplicaciones y empieza a centrarte en lo que de verdad importa.
-              </motion.p>
-              <motion.div
-                className="flex flex-col gap-4 min-[400px]:flex-row justify-center"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.6 }}
-              >
-                <Button asChild size="lg">
-                  <Link href="/signup" prefetch={false}>Empieza Gratis</Link>
-                </Button>
-              </motion.div>
-            </div>
-          </div>
-        </section>
-
-        {/* Problem Section */}
-        <section className="w-full py-12 md:py-24 lg:py-32 bg-muted">
-          <div className="container px-4 md:px-6">
-            <motion.div
-              className="max-w-3xl mx-auto text-center space-y-4"
-              initial={{ opacity: 0, y: 50 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ duration: 0.6 }}
+        <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-20 pt-10 sm:px-6 md:pt-16 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-14 lg:pb-28">
+          <div className="max-w-xl">
+            <h1 className="text-[2.75rem] font-extrabold leading-[0.95] sm:text-6xl lg:text-7xl">
+              {['Cada tarea,', 'contada en', 'sesiones de foco.'].map((line, i) => (
+                <span key={line} className="block overflow-hidden pb-[0.06em]">
+                  <span className="block animate-rise" style={{ animationDelay: `${i * 110}ms` }}>
+                    {line}
+                  </span>
+                </span>
+              ))}
+            </h1>
+            <p
+              className="mt-6 max-w-[34rem] animate-rise text-lg leading-relaxed text-muted-foreground"
+              style={{ animationDelay: '420ms' }}
             >
-              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">¿Te Sientes Abrumado?</h2>
-              <p className="text-lg text-muted-foreground">
-                Tienes metas ambiciosas, pero tu lista de tareas es un caos. Estás cansado de cambiar entre calendarios, aplicaciones para tomar notas y temporizadores, perdiendo el enfoque y el impulso por el camino. ¿Te suena familiar?
-              </p>
-            </motion.div>
-          </div>
-        </section>
-
-        {/* Solution/Features Section */}
-        <section className="w-full py-12 md:py-24 lg:py-32">
-          <div className="container px-4 md:px-6">
-            <motion.div
-              className="text-center space-y-4"
-              initial={{ opacity: 0, y: 50 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ duration: 0.6 }}
-            >
-              <div className="inline-block rounded-lg bg-primary/10 px-3 py-1 text-sm text-primary">
-                La Solución
-              </div>
-              <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">Tu Centro de Productividad Todo en Uno</h2>
-              <p className="max-w-[900px] mx-auto text-muted-foreground md:text-xl/relaxed">
-                TaskZen aporta claridad y enfoque a tu flujo de trabajo combinando las mejores herramientas de productividad en una experiencia única y fluida.
-              </p>
-            </motion.div>
-            <div className="mx-auto grid max-w-5xl items-start gap-8 py-12 sm:grid-cols-1 md:grid-cols-3">
-              <motion.div
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{ duration: 0.6, delay: 0.1 }}
-              >
-                <Card>
-                  <CardHeader className="flex flex-row items-center gap-4">
-                    <GanttChartSquare className="w-8 h-8 text-primary" />
-                    <CardTitle>Tablero Kanban Visual</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p>Visualiza tu flujo de trabajo, arrastra y suelta tareas y observa cómo avanza tu progreso. Perfecto para gestionar proyectos complejos con facilidad.</p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-              <motion.div
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-              >
-                <Card>
-                  <CardHeader className="flex flex-row items-center gap-4">
-                    <Timer className="w-8 h-8 text-primary" />
-                    <CardTitle>Temporizador Pomodoro Integrado</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p>Aumenta tu concentración y evita el agotamiento con el temporizador Pomodoro incorporado. Trabaja en sprints concentrados para obtener la máxima eficiencia.</p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-              <motion.div
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{ duration: 0.6, delay: 0.3 }}
-              >
-                <Card>
-                  <CardHeader className="flex flex-row items-center gap-4">
-                    <BarChart className="w-8 h-8 text-primary" />
-                    <CardTitle>Analíticas Detalladas</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p>Realiza un seguimiento de tu actividad, comprende tus patrones de trabajo y obtén información valiosa para optimizar tu productividad a lo largo del tiempo.</p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </div>
-          </div>
-        </section>
-
-        {/* Final CTA Section */}
-        <section className="w-full py-12 md:py-24 lg:py-32 border-t">
-          <div className="container text-center px-4 md:px-6">
-            <motion.div
-              className="max-w-2xl mx-auto space-y-4"
-              initial={{ opacity: 0, y: 50 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ duration: 0.6 }}
-            >
-              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">¿Listo para Tomar el Control?</h2>
-              <p className="text-muted-foreground">
-                Regístrate gratis y comienza tu viaje hacia una vida más organizada y productiva. No se requiere tarjeta de crédito.
-              </p>
-              <Button asChild size="lg">
-                <Link href="/signup" prefetch={false}>Regístrate Ahora</Link>
+              TaskZen junta tu tablero y tu temporizador. Estima cuántos Pomodoros te llevará cada tarea,
+              trabaja en ella con el reloj en marcha y ve en el tablero cuánto te falta.
+            </p>
+            <div className="mt-8 flex animate-rise flex-wrap items-center gap-3" style={{ animationDelay: '540ms' }}>
+              <Button asChild size="lg" className="h-12 px-6 text-base">
+                <Link href="/signup">Crear cuenta gratis</Link>
               </Button>
-            </motion.div>
+              <Button asChild size="lg" variant="ghost" className="h-12 px-4 text-base">
+                <Link href="/login">Ya tengo cuenta</Link>
+              </Button>
+            </div>
+          </div>
+          <div className="animate-rise" style={{ animationDelay: '650ms' }}>
+            <HeroDemo />
+          </div>
+        </section>
+
+        <section aria-labelledby="como-funciona" className="border-t bg-card">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 md:py-24">
+            <h2 id="como-funciona" className="max-w-xl text-3xl font-bold leading-tight sm:text-4xl">
+              Del plan al trabajo hecho, sin cambiar de app.
+            </h2>
+            <ol className="mt-12 grid gap-10 md:grid-cols-3 md:gap-8">
+              {steps.map((step) => (
+                <li key={step.title} className="flex flex-col gap-4">
+                  <div className="flex h-12 items-end">{step.visual}</div>
+                  <h3 className="text-xl font-semibold">{step.title}</h3>
+                  <p className="leading-relaxed text-muted-foreground">{step.body}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        <section aria-labelledby="modo-zen" className="dark bg-background text-foreground">
+          <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-20 sm:px-6 md:py-28 lg:grid-cols-2">
+            <div className="max-w-lg">
+              <h2 id="modo-zen" className="text-4xl font-extrabold leading-[1] sm:text-5xl">
+                Modo zen
+              </h2>
+              <p className="mt-5 text-xl leading-relaxed text-foreground/90">
+                Cuando toca concentrarse, todo lo demás desaparece.
+              </p>
+              <p className="mt-4 leading-relaxed text-muted-foreground">
+                Un clic y el temporizador ocupa toda la pantalla: solo el reloj, tu tarea y un círculo
+                que respira contigo. En el descanso te guía al mismo ritmo, cuatro segundos para inhalar
+                y cuatro para exhalar. La barra espaciadora pausa y Esc te devuelve al tablero.
+              </p>
+            </div>
+            <ZenPreview />
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6 md:py-28">
+          <div className="flex flex-col items-start gap-6 md:flex-row md:items-end md:justify-between">
+            <h2 className="max-w-2xl text-4xl font-extrabold leading-[1] sm:text-5xl">
+              Tu próxima tarea cabe en 25 minutos.
+            </h2>
+            <Button asChild size="lg" className="h-12 px-6 text-base">
+              <Link href="/signup">Crear cuenta gratis</Link>
+            </Button>
           </div>
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t">
-        <p className="text-xs text-muted-foreground">&copy; 2025 TaskZen. Todos los derechos reservados.</p>
-        <nav className="sm:ml-auto flex gap-4 sm:gap-6">
-          <Link href="#" className="text-xs hover:underline underline-offset-4" prefetch={false}>
-            Términos de Servicio
-          </Link>
-          <Link href="#" className="text-xs hover:underline underline-offset-4" prefetch={false}>
-            Privacidad
-          </Link>
-        </nav>
+      <footer className="border-t">
+        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-6 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <p>© {new Date().getFullYear()} TaskZen</p>
+          <p>Hecho para trabajar a ratos de 25 minutos.</p>
+        </div>
       </footer>
     </div>
   );

@@ -48,9 +48,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 const initialBoard: BoardState = {
   tasks: {},
   columns: {
-    todo: { id: 'todo', title: 'To Do', taskIds: [] },
-    'in-progress': { id: 'in-progress', title: 'In Progress', taskIds: [] },
-    done: { id: 'done', title: 'Done', taskIds: [] },
+    todo: { id: 'todo', title: 'Por hacer', taskIds: [] },
+    'in-progress': { id: 'in-progress', title: 'En curso', taskIds: [] },
+    done: { id: 'done', title: 'Hecho', taskIds: [] },
   },
   columnOrder: ['todo', 'in-progress', 'done'],
 }
@@ -62,38 +62,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [board, setBoard] = useState<BoardState>(initialBoard)
   const router = useRouter();
 
-  // Client-side cache for auth data
-  const [authCache, setAuthCache] = useState<{
-    token: string;
-    user: User;
-    expires: number;
-  } | null>(null);
-
-  // Helper function to fetch user with preferences - optimized to batch requests
+  // Helper function to fetch user with preferences
   const fetchUserWithPreferences = async (baseUser: Omit<User, 'preferences'>, token: string) => {
     try {
-      // Check cache first
-      if (authCache && authCache.token === token && Date.now() < authCache.expires) {
-        setUser(authCache.user);
-        setSession({ user: authCache.user, token });
-        return;
-      }
-
       const res = await fetch('/api/user/preferences', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!res.ok) throw new Error('Failed to fetch preferences');
       const preferences: UserPreferences = await res.json();
-      
+
       const fullUser = { ...baseUser, preferences };
-      
-      // Cache for 10 minutes
-      setAuthCache({
-        token,
-        user: fullUser,
-        expires: Date.now() + (10 * 60 * 1000)
-      });
-      
       setUser(fullUser);
       setSession({ user: fullUser, token });
     } catch (error) {
@@ -138,9 +116,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setBoard({
           tasks: tasksById,
           columns: {
-            todo: { id: 'todo', title: 'To Do', taskIds: todoIds },
-            'in-progress': { id: 'in-progress', title: 'In Progress', taskIds: inProgressIds },
-            done: { id: 'done', title: 'Done', taskIds: doneIds },
+            todo: { id: 'todo', title: 'Por hacer', taskIds: todoIds },
+            'in-progress': { id: 'in-progress', title: 'En curso', taskIds: inProgressIds },
+            done: { id: 'done', title: 'Hecho', taskIds: doneIds },
           },
           columnOrder: ['todo', 'in-progress', 'done'],
         });
@@ -152,52 +130,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const token = Cookies.get('token')
-    if (token) {
-      // Check cache first for faster startup
-      if (authCache && authCache.token === token && Date.now() < authCache.expires) {
-        setUser(authCache.user);
-        setSession({ user: authCache.user, token });
-        setLoading(false);
-        // Load tasks after setting user
-        loadTasks(token);
-        return;
-      }
+    if (!token) {
+      setLoading(false)
+      return
+    }
 
-      fetch('/api/auth/verify', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
+    // /api/tasks validates the token on its own, so both requests go out together
+    // and the app renders once with the user and the board already in place.
+    const verify = fetch('/api/auth/verify', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
       .then(res => res.json())
       .then(data => {
         if (data.user) {
-          // User already includes preferences from the batched API call
-          const fullUser = data.user;
-          
-          // Cache the complete user data
-          setAuthCache({
-            token,
-            user: fullUser,
-            expires: Date.now() + (10 * 60 * 1000)
-          });
-          
-          setUser(fullUser);
-          setSession({ user: fullUser, token });
-          
-          // Load tasks after setting user
-          loadTasks(token);
+          // verify returns the user with preferences included
+          setUser(data.user);
+          setSession({ user: data.user, token });
         } else {
-          setLoading(false);
+          Cookies.remove('token')
         }
       })
       .catch(() => {
         Cookies.remove('token')
-        setLoading(false);
       })
-      .finally(() => {
-        setLoading(false);
-      })
-    } else {
-      setLoading(false)
-    }
+
+    Promise.all([verify, loadTasks(token)]).finally(() => setLoading(false))
   }, [])
 
   const signIn = async (email: string, password: string) => {
@@ -258,6 +215,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     Cookies.remove('token')
     setUser(null)
     setSession(null)
+    setBoard(initialBoard)
     router.push('/login');
   }
 

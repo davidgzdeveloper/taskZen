@@ -1,28 +1,14 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import React, { FormEvent, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-
-function GoogleIcon() {
-  return (
-    <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <title>Google</title>
-      <path
-        d="M12.48 10.92v3.28h7.84c-.24 1.84-.85 3.18-1.73 4.1-1.02 1.02-2.6 1.98-4.66 1.98-3.55 0-6.43-2.91-6.43-6.49S7.93 5.51 11.48 5.51c1.91 0 3.3.79 4.07 1.52l2.36-2.36C16.32 3.24 14.16 2 11.48 2 6.45 2 2.73 5.61 2.73 10.63s3.72 8.63 8.75 8.63c2.63 0 4.87-.88 6.48-2.55s2.4-3.99 2.4-6.68c0-.6-.05-1.19-.15-1.73H12.48z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
 
 export default function SignupPage() {
   const { signUp, user, loading } = useAuth();
@@ -41,97 +27,89 @@ export default function SignupPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     try {
       const result = await signUp(email, password, fullName);
-      
+
       if (result.error) {
         toast({
-          title: "Error",
+          title: "No se pudo crear la cuenta",
           description: result.error,
           variant: "destructive",
         });
       } else {
         toast({
-          title: "Success",
-          description: "Account created successfully! Welcome to TaskZen!",
+          title: "Cuenta creada",
+          description: "Crea tu primera tarea y estima cuántos Pomodoros te llevará.",
         });
         router.push('/dashboard');
       }
     } catch (err) {
       toast({
-        title: "Error",
-        description: "An unexpected error occurred during signup",
+        title: "No se pudo crear la cuenta",
+        description: "El servidor no respondió. Comprueba tu conexión e inténtalo de nuevo.",
         variant: "destructive",
       });
     }
-    
+
     setIsLoading(false);
   };
-  
+
   const totalLoading = isLoading || loading;
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="text-2xl">Sign Up</CardTitle>
-        <CardDescription>
-          Create an account to start managing your tasks.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="fullName">Full Name</Label>
-              <Input
-                id="fullName"
-                type="text"
-                placeholder="John Doe"
-                required
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                disabled={totalLoading}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="m@example.com"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={totalLoading}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={totalLoading}
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={totalLoading}>
-              {totalLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Account
-            </Button>
-            <Separator className="my-2" />
-            <Button variant="outline" className="w-full" type="button" disabled={totalLoading}>
-              <GoogleIcon />
-              Sign up with Google
-            </Button>
-          </div>
-        </form>
-        <div className="mt-4 text-center text-sm">
-          Already have an account?{" "}
-          <Link href="/login" className="underline">
-            Login
-          </Link>
+    <div>
+      <h1 className="text-4xl font-extrabold">Crear cuenta</h1>
+      <p className="mt-2 text-muted-foreground">Es gratis y solo te pedimos tres datos.</p>
+      <form onSubmit={handleSubmit} className="mt-8 grid gap-5">
+        <div className="grid gap-2">
+          <Label htmlFor="fullName">Nombre</Label>
+          <Input
+            id="fullName"
+            type="text"
+            autoComplete="name"
+            placeholder="Ana García"
+            required
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            disabled={totalLoading}
+            className="h-11"
+          />
         </div>
-      </CardContent>
-    </Card>
+        <div className="grid gap-2">
+          <Label htmlFor="email">Correo electrónico</Label>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            placeholder="tu@correo.com"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={totalLoading}
+            className="h-11"
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="password">Contraseña</Label>
+          <Input id="password" type="password" autoComplete="new-password" required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={totalLoading}
+            className="h-11"
+          />
+        </div>
+        <Button type="submit" className="h-11 w-full text-base" disabled={totalLoading}>
+          {totalLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Crear cuenta
+        </Button>
+      </form>
+      <p className="mt-6 text-sm text-muted-foreground">
+        ¿Ya tienes cuenta?{" "}
+        <Link href="/login" className="font-medium text-primary underline-offset-4 hover:underline">
+          Iniciar sesión
+        </Link>
+      </p>
+    </div>
   );
 }

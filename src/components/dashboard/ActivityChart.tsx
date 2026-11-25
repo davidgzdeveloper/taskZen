@@ -1,20 +1,18 @@
 "use client"
 
-import { Line, LineChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ChartTooltipContent, ChartConfig, ChartContainer } from "@/components/ui/chart"
-import { useMemo } from "react"
-import { DateRange } from "react-day-picker"
-import { format } from "date-fns"
+import { Line, LineChart, CartesianGrid, XAxis, YAxis } from "recharts"
+import { ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, ChartConfig, ChartContainer } from "@/components/ui/chart"
+import { format, parseISO } from "date-fns"
+import { es } from "date-fns/locale"
 
 const chartConfig = {
   tasksCompleted: {
-    label: "Tasks",
-    color: "hsl(var(--primary))",
+    label: "Tareas",
+    color: "hsl(var(--chart-tasks))",
   },
   pomodorosCompleted: {
     label: "Pomodoros",
-    color: "hsl(var(--accent))",
+    color: "hsl(var(--chart-pomodoros))",
   },
 } satisfies ChartConfig
 
@@ -24,50 +22,35 @@ interface ActivityChartProps {
     tasksCompleted: number
     pomodorosCompleted: number
   }[]
-  dateRange: DateRange | undefined
 }
 
-export function ActivityChart({ data, dateRange }: ActivityChartProps) {
+export function ActivityChart({ data }: ActivityChartProps) {
   const chartData = data.map(item => ({
     ...item,
-    date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    date: format(parseISO(item.date), "d MMM", { locale: es }),
   }));
 
-  const title = useMemo(() => {
-    if (dateRange?.from && dateRange?.to) {
-      if (format(dateRange.from, "LLL dd, y") === format(dateRange.to, "LLL dd, y")) {
-        return `Activity for ${format(dateRange.from, "LLL dd, y")}`;
-      }
-      return `Activity from ${format(dateRange.from, "LLL dd, y")} to ${format(dateRange.to, "LLL dd, y")}`;
-    }
-    return "Activity";
-  }, [dateRange]);
-
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ChartContainer config={chartConfig} className="h-80 w-full">
-            <ResponsiveContainer>
-                <LineChart data={chartData}>
-                    <CartesianGrid vertical={false} />
-                    <XAxis
-                        dataKey="date"
-                        tickLine={false}
-                        tickMargin={10}
-                        axisLine={false}
-                        tickFormatter={(value) => value}
-                    />
-                    <YAxis />
-                    <Tooltip content={<ChartTooltipContent />} />
-                    <Line type="monotone" dataKey="tasksCompleted" stroke="var(--color-tasksCompleted)" strokeWidth={2} />
-                    <Line type="monotone" dataKey="pomodorosCompleted" stroke="var(--color-pomodorosCompleted)" strokeWidth={2} />
-                </LineChart>
-            </ResponsiveContainer>
+    <section aria-labelledby="activity-title" className="rounded-xl border bg-card p-5 sm:p-6">
+      <h2 id="activity-title" className="text-xl font-semibold">Actividad</h2>
+      <p className="mt-1 text-sm text-muted-foreground">Tareas terminadas y sus Pomodoros, por día de cierre.</p>
+      {chartData.length === 0 ? (
+        <p className="flex h-64 items-center text-muted-foreground">
+          No terminaste ninguna tarea en estas fechas. Prueba con un rango más amplio.
+        </p>
+      ) : (
+        <ChartContainer config={chartConfig} className="mt-4 h-72 w-full">
+          <LineChart data={chartData} margin={{ left: -16, right: 8, top: 8 }}>
+            <CartesianGrid vertical={false} strokeDasharray="0" className="stroke-border" />
+            <XAxis dataKey="date" tickLine={false} tickMargin={10} axisLine={false} />
+            <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={40} />
+            <ChartTooltip cursor={{ strokeWidth: 1 }} content={<ChartTooltipContent />} />
+            <ChartLegend content={<ChartLegendContent />} />
+            <Line type="monotone" dataKey="tasksCompleted" stroke="var(--color-tasksCompleted)" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 5 }} />
+            <Line type="monotone" dataKey="pomodorosCompleted" stroke="var(--color-pomodorosCompleted)" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 5 }} />
+          </LineChart>
         </ChartContainer>
-      </CardContent>
-    </Card>
+      )}
+    </section>
   )
 }

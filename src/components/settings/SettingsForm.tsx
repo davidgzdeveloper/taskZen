@@ -2,7 +2,6 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -54,20 +53,19 @@ export function SettingsForm() {
 
             if (result.error) {
                 toast({
-                    title: "Error",
+                    title: "No se guardaron los ajustes",
                     description: result.error,
                     variant: "destructive",
                 });
             } else {
                 toast({
-                    title: "Settings Saved",
-                    description: "Your preferences have been updated.",
+                    title: "Ajustes guardados",
                 });
             }
         } catch (err) {
             toast({
-                title: "Error",
-                description: "An unexpected error occurred while saving settings.",
+                title: "No se guardaron los ajustes",
+                description: "El servidor no respondió. Comprueba tu conexión e inténtalo de nuevo.",
                 variant: "destructive",
             });
         }
@@ -85,18 +83,13 @@ export function SettingsForm() {
     }
 
     return (
-        <Card className="max-w-2xl mx-auto">
-            <CardHeader>
-                <CardTitle>Settings</CardTitle>
-                <CardDescription>Manage your application preferences.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-8">
+        <div className="max-w-2xl">
+                <form onSubmit={handleSubmit} className="space-y-10">
                     <div className="space-y-4">
-                        <h3 className="text-lg font-medium">Pomodoro Timer</h3>
+                        <h2 className="text-xl font-semibold">Temporizador</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="work-duration">Work Duration (minutes)</Label>
+                                <Label htmlFor="work-duration">Sesión de foco (minutos)</Label>
                                 <Input 
                                     id="work-duration" 
                                     type="number" 
@@ -108,7 +101,7 @@ export function SettingsForm() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="break-duration">Break Duration (minutes)</Label>
+                                <Label htmlFor="break-duration">Descanso (minutos)</Label>
                                 <Input 
                                     id="break-duration" 
                                     type="number"
@@ -123,12 +116,12 @@ export function SettingsForm() {
                     </div>
 
                     <div className="space-y-4">
-                         <h3 className="text-lg font-medium">Appearance & Notifications</h3>
-                        <div className="flex items-center justify-between rounded-lg border p-4">
+                         <h2 className="text-xl font-semibold">Apariencia y avisos</h2>
+                        <div className="flex items-center justify-between gap-4 rounded-xl border bg-card p-4">
                             <div>
-                                <Label htmlFor="notifications">Enable Notifications</Label>
+                                <Label htmlFor="notifications">Avisos</Label>
                                 <p className="text-sm text-muted-foreground">
-                                    Get notified when a session ends.
+                                    Recibe un aviso cuando termina una sesión.
                                 </p>
                             </div>
                             <Switch 
@@ -138,11 +131,11 @@ export function SettingsForm() {
                                 disabled={isLoading}
                             />
                         </div>
-                         <div className="flex items-center justify-between rounded-lg border p-4">
+                         <div className="flex items-center justify-between gap-4 rounded-xl border bg-card p-4">
                              <div>
-                                <Label htmlFor="theme">Dark Mode</Label>
+                                <Label htmlFor="theme">Modo oscuro</Label>
                                 <p className="text-sm text-muted-foreground">
-                                    Toggle between light and dark themes.
+                                    Fondo azul noche, más cómodo con poca luz.
                                 </p>
                             </div>
                             <Switch 
@@ -154,14 +147,13 @@ export function SettingsForm() {
                         </div>
                     </div>
 
-                    <div className="flex justify-end">
+                    <div>
                         <Button type="submit" disabled={isLoading}>
                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Save Changes
+                            Guardar ajustes
                         </Button>
                     </div>
                 </form>
-            </CardContent>
-        </Card>
+        </div>
     );
 }

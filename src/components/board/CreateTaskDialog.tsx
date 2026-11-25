@@ -23,8 +23,43 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAppContext } from "@/hooks/useAppContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { TaskPriority } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { Plus } from "lucide-react";
 import { useState, FormEvent } from "react";
+
+const MAX_POMODOROS = 8;
+
+/** Pick an estimate by clicking the pip it should end on. */
+function PomodoroEstimate({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  return (
+    <div role="radiogroup" aria-labelledby="pomodoros-label" className="flex items-center gap-1">
+      {Array.from({ length: MAX_POMODOROS }, (_, i) => {
+        const n = i + 1;
+        return (
+          <button
+            key={n}
+            type="button"
+            role="radio"
+            aria-checked={value === n}
+            aria-label={`${n} ${n === 1 ? "pomodoro" : "pomodoros"}`}
+            onClick={() => onChange(n)}
+            className="grid h-8 w-8 place-items-center rounded-full"
+          >
+            <span
+              className={cn(
+                "h-4 w-4 rounded-full transition-colors",
+                n <= value ? "bg-focus" : "border-[1.5px] border-muted-foreground/40"
+              )}
+            />
+          </button>
+        );
+      })}
+      <span className="digits ml-2 text-sm text-muted-foreground">
+        {value * 25} min
+      </span>
+    </div>
+  );
+}
 
 export function CreateTaskDialog() {
   const [open, setOpen] = useState(false);
@@ -38,7 +73,7 @@ export function CreateTaskDialog() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!title || !user) return;
-    
+
     try {
       await addTask({
         title,
@@ -46,7 +81,7 @@ export function CreateTaskDialog() {
         priority,
         estimatedPomodoros,
       }, user.id);
-      
+
       setOpen(false);
       // Reset form
       setTitle("");
@@ -63,77 +98,60 @@ export function CreateTaskDialog() {
       <DialogTrigger asChild>
         <Button>
           <Plus className="mr-2 h-4 w-4" />
-          Add Task
+          Nueva tarea
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]" aria-describedby="dialog-description">
+      <DialogContent className="sm:max-w-[460px]" aria-describedby="dialog-description">
         <DialogHeader>
-          <DialogTitle id="dialog-title">Add a new task</DialogTitle>
+          <DialogTitle id="dialog-title" className="text-2xl font-bold">Nueva tarea</DialogTitle>
           <DialogDescription id="dialog-description">
-            What do you want to get done?
+            Se añadirá a Por hacer.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="title" className="text-right">
-                Title
-              </Label>
+          <div className="grid gap-5 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="title">Título</Label>
               <Input
                 id="title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="col-span-3"
+                placeholder="Escribir propuesta para el cliente"
                 required
               />
             </div>
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label htmlFor="description" className="text-right pt-2">
-                Description
-              </Label>
+            <div className="grid gap-2">
+              <Label htmlFor="description">Descripción (opcional)</Label>
               <Textarea
                 id="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="col-span-3"
                 rows={3}
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="priority" className="text-right">
-                Priority
-              </Label>
+            <div className="grid gap-2">
+              <Label htmlFor="priority">Prioridad</Label>
               <Select
                 value={priority}
                 onValueChange={(v) => setPriority(v as TaskPriority)}
               >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select priority" />
+                <SelectTrigger id="priority">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="high">Alta</SelectItem>
+                  <SelectItem value="medium">Media</SelectItem>
+                  <SelectItem value="low">Baja</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="pomodoros" className="text-right">
-                Pomodoros
-              </Label>
-              <Input
-                id="pomodoros"
-                type="number"
-                min="1"
-                max="10"
-                value={estimatedPomodoros}
-                onChange={(e) => setEstimatedPomodoros(Number(e.target.value))}
-                className="col-span-3"
-              />
+            <div className="grid gap-2">
+              <Label id="pomodoros-label">¿Cuántos Pomodoros te llevará?</Label>
+              <PomodoroEstimate value={estimatedPomodoros} onChange={setEstimatedPomodoros} />
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit">Create Task</Button>
+            <Button type="submit">Crear tarea</Button>
           </DialogFooter>
         </form>
       </DialogContent>

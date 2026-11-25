@@ -3,13 +3,16 @@
 import { ActivityChart } from "@/components/dashboard/ActivityChart";
 import { PriorityPieChart } from "@/components/dashboard/PriorityPieChart";
 import { RecentTasks } from "@/components/dashboard/RecentTasks";
-import { StatsCard } from "@/components/dashboard/StatsCard";
+import { PomodoroPips } from "@/components/PomodoroPips";
+import { CountUp } from "@/components/CountUp";
+import Link from "next/link";
 import { useAppContext } from "@/hooks/useAppContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { Task, DashboardStats } from "@/lib/types";
-import { CheckCircle2, Target, Trophy, Clock, Calendar as CalendarIcon } from "lucide-react";
-import { useMemo, useState, useEffect } from "react";
-import { format, isToday, parseISO, subDays } from 'date-fns';
+import { Task } from "@/lib/types";
+import { Calendar as CalendarIcon, Moon } from "lucide-react";
+import { useMemo, useState } from "react";
+import { format, isToday, subDays } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -18,71 +21,26 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 
 export default function DashboardPage() {
   const { board } = useAppContext();
-  const { user, session } = useAuth();
-  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
   const [date, setDate] = useState<DateRange | undefined>({
     from: subDays(new Date(), 7),
     to: new Date(),
   });
   
   const tasks = useMemo(() => Object.values(board.tasks), [board.tasks]);
+
+  // Counts come from the board already in memory (loaded once by AuthContext),
+  // so the dashboard needs no extra requests and stays in sync with every move.
+  const columnCounts = useMemo(() => {
+    const done = board.columns.done.taskIds.length;
+    return [
+      { label: "Por hacer", value: board.columns.todo.taskIds.length },
+      { label: "En curso", value: board.columns["in-progress"].taskIds.length },
+      { label: "Hechas", value: done },
+      { label: "Puntos", value: done * 10 },
+    ];
+  }, [board.columns]);
   
-  // Load dashboard stats from API
-  useEffect(() => {
-    let isMounted = true;
-    
-    const loadDashboardStats = async () => {
-      if (!session) {
-        setLoading(false);
-        return;
-      }
-      
-      try {
-        const response = await fetch('/api/dashboard/stats', {
-          headers: { 'Authorization': `Bearer ${session.token}` }
-        });
-        
-        if (response.ok && isMounted) {
-          const stats = await response.json();
-          setDashboardStats(stats);
-        }
-      } catch (error) {
-        console.error('Failed to load dashboard stats:', error);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    if (session) {
-      loadDashboardStats();
-    }
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [session]);
-
-  // Reload stats when tasks change significantly (but debounced)
-  useEffect(() => {
-    if (!session || loading) return;
-    
-    const timeoutId = setTimeout(() => {
-      fetch('/api/dashboard/stats', {
-        headers: { 'Authorization': `Bearer ${session.token}` }
-      })
-      .then(res => res.ok ? res.json() : null)
-      .then(stats => stats && setDashboardStats(stats))
-      .catch(err => console.error('Failed to update dashboard stats:', err));
-    }, 500); // Debounce for 500ms
-    
-    return () => clearTimeout(timeoutId);
-  }, [tasks.length, session, loading]);
-  
-  if (!user) return null;
-
   const todayStats = useMemo(() => {
     const completedToday = tasks.filter(task => 
       task.completedAt && isToday(new Date(task.completedAt))
@@ -111,64 +69,54 @@ export default function DashboardPage() {
     return Object.values(activityMap).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [tasks, date]);
 
-  if (loading) {
-    return (
-      <div className="flex flex-col gap-6">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-24 bg-muted animate-pulse rounded-lg"></div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  if (!user) return null;
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatsCard
-          title="Tasks Completed Today"
-          value={todayStats.tasksCompleted}
-          icon={<CheckCircle2 className="h-4 w-4 text-muted-foreground" />}
-        />
-        <StatsCard
-          title="Pomodoros Today"
-          value={todayStats.pomodorosCompleted}
-          icon={<Clock className="h-4 w-4 text-muted-foreground" />}
-        />
-        <StatsCard
-          title="Total Tasks"
-          value={dashboardStats?.totalTasks || 0}
-          icon={<Target className="h-4 w-4 text-muted-foreground" />}
-        />
-        <StatsCard
-          title="Total Score"
-          value={(dashboardStats?.totalScore || 0).toLocaleString()}
-          icon={<Trophy className="h-4 w-4 text-muted-foreground" />}
-        />
-      </div>
-      <div className="grid gap-4 md:grid-cols-3 mb-6">
-        <div className="bg-card p-4 rounded-lg border">
-          <h3 className="text-sm font-medium text-muted-foreground mb-2">To Do</h3>
-          <div className="text-2xl font-bold">{dashboardStats?.pendingTasks || 0}</div>
+      <section aria-labelledby="today-title" className="grid gap-8 rounded-xl border bg-card p-5 sm:p-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <div>
+          <h2 id="today-title" className="text-xl font-semibold">Hoy</h2>
+          <p className="numeral mt-3 text-7xl font-bold leading-none sm:text-8xl">
+            <CountUp value={todayStats.pomodorosCompleted} />
+          </p>
+          <p className="mt-2 text-muted-foreground">
+            {todayStats.pomodorosCompleted === 1 ? "Pomodoro" : "Pomodoros"} en {todayStats.tasksCompleted}{" "}
+            {todayStats.tasksCompleted === 1 ? "tarea terminada" : "tareas terminadas"}
+          </p>
+          {todayStats.pomodorosCompleted > 0 && (
+            <PomodoroPips
+              done={todayStats.pomodorosCompleted}
+              total={todayStats.pomodorosCompleted}
+              size="lg"
+              className="mt-5"
+            />
+          )}
+          <Link
+            href="/timer?zen=1"
+            className="mt-6 flex w-fit items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+          >
+            <Moon className="h-4 w-4" />
+            Empezar una sesión en modo zen
+          </Link>
         </div>
-        <div className="bg-card p-4 rounded-lg border">
-          <h3 className="text-sm font-medium text-muted-foreground mb-2">In Progress</h3>
-          <div className="text-2xl font-bold">{dashboardStats?.inProgressTasks || 0}</div>
-        </div>
-        <div className="bg-card p-4 rounded-lg border">
-          <h3 className="text-sm font-medium text-muted-foreground mb-2">Completed</h3>
-          <div className="text-2xl font-bold">{dashboardStats?.completedTasks || 0}</div>
-        </div>
-      </div>
-      <div className="flex items-center gap-2">
+        <dl className="grid grid-cols-2 content-end gap-x-6 gap-y-5">
+          {columnCounts.map((item) => (
+            <div key={item.label} className="border-t pt-3">
+              <dt className="text-sm text-muted-foreground">{item.label}</dt>
+              <dd className="numeral mt-1 text-3xl font-semibold"><CountUp value={item.value} /></dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      <div className="flex items-center">
         <Popover>
           <PopoverTrigger asChild>
             <Button
               id="date"
-              variant={"outline"}
+              variant="outline"
               className={cn(
-                "w-[300px] justify-start text-left font-normal",
+                "w-full justify-start text-left font-normal sm:w-[300px]",
                 !date && "text-muted-foreground"
               )}
             >
@@ -176,14 +124,13 @@ export default function DashboardPage() {
               {date?.from ? (
                 date.to ? (
                   <>
-                    {format(date.from, "LLL dd, y")} -{" "}
-                    {format(date.to, "LLL dd, y")}
+                    {format(date.from, "d MMM y", { locale: es })} – {format(date.to, "d MMM y", { locale: es })}
                   </>
                 ) : (
-                  format(date.from, "LLL dd, y")
+                  format(date.from, "d MMM y", { locale: es })
                 )
               ) : (
-                <span>Pick a date</span>
+                <span>Elige un rango de fechas</span>
               )}
             </Button>
           </PopoverTrigger>
@@ -191,6 +138,7 @@ export default function DashboardPage() {
             <Calendar
               initialFocus
               mode="range"
+              locale={es}
               defaultMonth={date?.from}
               selected={date}
               onSelect={setDate}
@@ -199,11 +147,10 @@ export default function DashboardPage() {
           </PopoverContent>
         </Popover>
       </div>
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-1 mt-6">
-        <ActivityChart data={activityData} dateRange={date} />
+
+      <ActivityChart data={activityData} />
+      <div className="grid gap-6 lg:grid-cols-2">
         <PriorityPieChart tasks={tasks as Task[]} />
-      </div>
-      <div>
         <RecentTasks tasks={tasks as Task[]} />
       </div>
     </div>

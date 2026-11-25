@@ -1,21 +1,21 @@
 
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Task, TaskPriority } from "@/lib/types";
-import { Clock, GripVertical, ArrowLeft, ArrowRight, Play } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { ColumnId, Task, TaskPriority } from "@/lib/types";
+import { GripVertical, ArrowLeft, ArrowRight } from "lucide-react";
+import { PomodoroPips } from "@/components/PomodoroPips";
+import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 import { useRef, useEffect, useState } from "react";
 import { draggable } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
-const priorityClasses: Record<TaskPriority, string> = {
-  high: "border-l-4 border-destructive",
-  medium: "border-l-4 border-accent",
-  low: "border-l-4 border-primary/50",
+const priorityLabel: Record<TaskPriority, { text: string; className: string }> = {
+  high: { text: "Alta", className: "text-destructive font-semibold" },
+  medium: { text: "Media", className: "text-muted-foreground" },
+  low: { text: "Baja", className: "text-muted-foreground/70" },
 };
 
 interface TaskCardProps {
@@ -28,7 +28,7 @@ export function TaskCard({ task, columnId, isMobile = false }: TaskCardProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const { toast } = useToast();
-  const { session } = useAuth();
+  const { session, moveTask: moveTaskInBoard } = useAuth();
 
   useEffect(() => {
     const element = ref.current;
@@ -53,18 +53,16 @@ export function TaskCard({ task, columnId, isMobile = false }: TaskCardProps) {
     }
   }, [task.id, columnId, isMobile]);
 
-  const containerClasses = isMobile ? "mb-2" : "mb-4";
-  const cardPadding = isMobile ? "p-2" : "p-3";
-  const titleSize = isMobile ? "text-sm" : "text-base";
-  const descriptionMargin = isMobile ? "mb-2" : "mb-3";
-
-  const moveTask = async (targetColumn: string) => {
+  const moveTask = async (targetColumn: ColumnId) => {
+    // Move locally first so the card slides right away; revert if the server refuses.
+    moveTaskInBoard(task.id, columnId as ColumnId, targetColumn);
     try {
       if (!session) {
-        toast({ 
-          title: "Authentication Error", 
-          description: "Please log in to move tasks.",
-          variant: "destructive" 
+        moveTaskInBoard(task.id, targetColumn, columnId as ColumnId);
+        toast({
+          title: "Sesión caducada",
+          description: "Inicia sesión de nuevo para mover tareas.",
+          variant: "destructive"
         });
         return;
       }
@@ -85,23 +83,22 @@ export function TaskCard({ task, columnId, isMobile = false }: TaskCardProps) {
         body: JSON.stringify({ status: statusMap[targetColumn] }),
       });
       if (!response.ok) throw new Error('Failed to move task');
-      toast({ title: "Task Moved" });
-      // Reload to reflect changes across the app
-      window.location.reload();
+      toast({ title: "Tarea movida" });
     } catch (error) {
-      toast({ title: "Move Failed", variant: "destructive" });
+      moveTaskInBoard(task.id, targetColumn, columnId as ColumnId);
+      toast({ title: "No se pudo mover la tarea", description: "La tarea ha vuelto a su columna. Inténtalo de nuevo.", variant: "destructive" });
     }
   };
 
   const moveTaskLeft = () => {
-    let targetColumn = '';
+    let targetColumn: ColumnId | '' = '';
     if (columnId === 'in-progress') targetColumn = 'todo';
     else if (columnId === 'done') targetColumn = 'in-progress';
     if (targetColumn) moveTask(targetColumn);
   };
 
   const moveTaskRight = () => {
-    let targetColumn = '';
+    let targetColumn: ColumnId | '' = '';
     if (columnId === 'todo') targetColumn = 'in-progress';
     else if (columnId === 'in-progress') targetColumn = 'done';
     if (targetColumn) moveTask(targetColumn);
@@ -111,92 +108,74 @@ export function TaskCard({ task, columnId, isMobile = false }: TaskCardProps) {
   const canMoveLeft = columnId !== 'todo';
   const canMoveRight = columnId !== 'done';
   const getLeftButtonLabel = () => {
-    if (columnId === 'in-progress') return 'To Do';
-    if (columnId === 'done') return 'In Progress';
+    if (columnId === 'in-progress') return 'Por hacer';
+    if (columnId === 'done') return 'En curso';
     return '';
   };
   const getRightButtonLabel = () => {
-    if (columnId === 'todo') return 'In Progress';
-    if (columnId === 'in-progress') return 'Done';
+    if (columnId === 'todo') return 'En curso';
+    if (columnId === 'in-progress') return 'Hecho';
     return '';
   };
 
+  const isDone = columnId === 'done';
+  const priority = priorityLabel[task.priority];
+
   return (
-    <div
+    <motion.div
       ref={ref}
-      className={containerClasses}
-      style={{ 
-        cursor: isMobile ? 'default' : (isDragging ? 'grabbing' : 'grab'),
-        opacity: isDragging ? 0.5 : 1,
-        transform: isDragging ? 'scale(1.02)' : 'scale(1)',
-        transition: 'transform 0.2s ease, opacity 0.2s ease'
-      }}
+      layoutId={task.id}
+      layout="position"
+      initial={{ opacity: 0, scale: 0.97 }}
+      animate={{ opacity: isDragging ? 0.5 : 1, scale: 1 }}
+      transition={{ type: "spring", stiffness: 380, damping: 34 }}
+      className={cn(
+        "group rounded-lg border bg-card p-3",
+        !isMobile && (isDragging ? "cursor-grabbing ring-2 ring-primary" : "cursor-grab hover:border-input")
+      )}
     >
-      <Card className={`shadow-sm hover:shadow-md transition-shadow ${priorityClasses[task.priority]} ${isDragging ? 'ring-2 ring-primary' : ''}`}>
-        <CardContent className={cardPadding}>
-          <div className="flex justify-between items-start">
-            <p className={`font-semibold ${titleSize} leading-tight mb-2 pr-2`}>{task.title}</p>
-            {!isMobile && (
-              <div className="cursor-grab p-1 flex-shrink-0">
-                <GripVertical className="h-4 w-4 text-muted-foreground" />
-              </div>
-            )}
-          </div>
-          {task.description && (
-            <p className={`text-xs ${isMobile ? 'text-muted-foreground/80' : 'text-muted-foreground'} ${descriptionMargin} ${isMobile ? 'line-clamp-2' : ''}`}>
-              {task.description}
-            </p>
+      <div className="flex items-start justify-between gap-2">
+        <p className={cn("font-medium leading-snug", isDone && "text-muted-foreground line-through decoration-done/60")}>
+          {task.title}
+        </p>
+        {!isMobile && (
+          <GripVertical aria-hidden className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground/0 transition-colors group-hover:text-muted-foreground" />
+        )}
+      </div>
+      {task.description && (
+        <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{task.description}</p>
+      )}
+      <div className="mt-3 flex items-center justify-between gap-2 text-sm">
+        <div className="flex items-center gap-2">
+          <PomodoroPips
+            done={task.completedPomodoros || 0}
+            total={task.estimatedPomodoros || 1}
+            size="sm"
+          />
+          <span className="digits text-muted-foreground">
+            {task.completedPomodoros || 0}/{task.estimatedPomodoros}
+          </span>
+        </div>
+        <span className={priority.className}>{priority.text}</span>
+      </div>
+
+      {/* Mobile: move between columns with buttons instead of drag & drop */}
+      {isMobile && (canMoveLeft || canMoveRight) && (
+        <div className="mt-3 flex items-center gap-2">
+          {canMoveLeft && (
+            <Button variant="outline" size="sm" className="h-8 gap-1 px-2.5" onClick={moveTaskLeft}>
+              <ArrowLeft className="h-3.5 w-3.5" />
+              {getLeftButtonLabel()}
+            </Button>
           )}
-          <div className={`flex items-center justify-between ${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground ${isMobile ? 'mb-2' : ''}`}>
-            <div className="flex items-center gap-1">
-              <Clock className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
-              <span>
-                {task.completedPomodoros}/{task.estimatedPomodoros}
-              </span>
-            </div>
-            <Avatar className={`${isMobile ? 'h-5 w-5' : 'h-6 w-6'}`}>
-              <AvatarImage src="https://placehold.co/32x32" data-ai-hint="person face" />
-              <AvatarFallback className={`${isMobile ? 'text-xs' : 'text-sm'}`}>AD</AvatarFallback>
-            </Avatar>
-          </div>
-          
-          {/* Mobile action buttons */}
-          {isMobile && (
-            <div className="flex items-center gap-1 mt-2">
-              {canMoveLeft && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-6 px-2 text-xs flex items-center gap-1"
-                  onClick={moveTaskLeft}
-                >
-                  <ArrowLeft className="h-3 w-3" />
-                  {getLeftButtonLabel()}
-                </Button>
-              )}
-              {canMoveRight && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-6 px-2 text-xs flex items-center gap-1"
-                  onClick={moveTaskRight}
-                >
-                  {getRightButtonLabel()}
-                  <ArrowRight className="h-3 w-3" />
-                </Button>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-6 px-2 text-xs flex items-center gap-1 ml-auto"
-                onClick={() => {/* TODO: Navigate to timer */}}
-              >
-                <Play className="h-3 w-3" />
-              </Button>
-            </div>
+          {canMoveRight && (
+            <Button variant="outline" size="sm" className="ml-auto h-8 gap-1 px-2.5" onClick={moveTaskRight}>
+              {getRightButtonLabel()}
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Button>
           )}
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      )}
+    </motion.div>
   );
 }

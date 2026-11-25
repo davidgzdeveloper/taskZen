@@ -1,17 +1,10 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Task, TaskPriority } from "@/lib/types";
+import { Task } from "@/lib/types";
 import { useMemo } from "react";
 import { formatDistanceToNow } from "date-fns";
-
-const priorityVariant: Record<TaskPriority, "destructive" | "secondary" | "default"> = {
-  high: "destructive",
-  medium: "secondary",
-  low: "default",
-};
+import { es } from "date-fns/locale";
+import { PomodoroPips } from "@/components/PomodoroPips";
 
 export function RecentTasks({ tasks }: { tasks: Task[] }) {
     const recentTasks = useMemo(() => {
@@ -22,38 +15,23 @@ export function RecentTasks({ tasks }: { tasks: Task[] }) {
     }, [tasks]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Recently Completed Tasks</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {recentTasks.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Task</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Completed</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {recentTasks.map(task => (
-                <TableRow key={task.id}>
-                  <TableCell className="font-medium">{task.title}</TableCell>
-                  <TableCell>
-                    <Badge variant={priorityVariant[task.priority]} className="capitalize">
-                      {task.priority}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{formatDistanceToNow(new Date(task.completedAt!), { addSuffix: true })}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <p className="text-sm text-muted-foreground">No tasks completed recently.</p>
-        )}
-      </CardContent>
-    </Card>
+    <section aria-labelledby="recent-title" className="rounded-xl border bg-card p-5 sm:p-6">
+      <h2 id="recent-title" className="text-xl font-semibold">Terminadas hace poco</h2>
+      {recentTasks.length > 0 ? (
+        <ul className="mt-4 divide-y">
+          {recentTasks.map(task => (
+            <li key={task.id} className="flex flex-col gap-1 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+              <span className="font-medium">{task.title}</span>
+              <span className="flex items-center gap-3 text-sm text-muted-foreground">
+                <PomodoroPips done={task.completedPomodoros || 0} total={task.estimatedPomodoros || 1} size="sm" />
+                {formatDistanceToNow(new Date(task.completedAt!), { addSuffix: true, locale: es })}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-3 text-muted-foreground">Cuando muevas una tarea a Hecho, aparecerá aquí.</p>
+      )}
+    </section>
   );
 }

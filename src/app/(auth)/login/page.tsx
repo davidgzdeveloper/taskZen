@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,81 +27,71 @@ export default function LoginPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     try {
       const result = await signIn(email, password);
-      
+
       if (result.error) {
         toast({
-          title: "Error",
+          title: "No se pudo iniciar sesión",
           description: result.error,
           variant: "destructive",
         });
       } else {
-        toast({
-          title: "Success",
-          description: "Logged in successfully!",
-        });
-        console.log(user);
         router.push('/dashboard');
       }
     } catch (err) {
       toast({
-        title: "Error",
-        description: "An unexpected error occurred",
+        title: "No se pudo iniciar sesión",
+        description: "El servidor no respondió. Comprueba tu conexión e inténtalo de nuevo.",
         variant: "destructive",
       });
     }
-    
+
     setIsLoading(false);
   };
 
   const totalLoading = isLoading || loading;
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="text-2xl">Login</CardTitle>
-        <CardDescription>
-          Enter your email below to login to your account
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="m@example.com"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={totalLoading}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" required 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={totalLoading}
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={totalLoading}>
-              {totalLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Login
-            </Button>
-          </div>
-        </form>
-        <div className="mt-4 text-center text-sm">
-          Don&apos;t have an account?{" "}
-          <Link href="/signup" className="underline">
-            Sign up
-          </Link>
+    <div>
+      <h1 className="text-4xl font-extrabold">Iniciar sesión</h1>
+      <p className="mt-2 text-muted-foreground">Vuelve a tu tablero.</p>
+      <form onSubmit={handleSubmit} className="mt-8 grid gap-5">
+        <div className="grid gap-2">
+          <Label htmlFor="email">Correo electrónico</Label>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            placeholder="tu@correo.com"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={totalLoading}
+            className="h-11"
+          />
         </div>
-      </CardContent>
-    </Card>
+        <div className="grid gap-2">
+          <Label htmlFor="password">Contraseña</Label>
+          <Input id="password" type="password" autoComplete="current-password" required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={totalLoading}
+            className="h-11"
+          />
+        </div>
+        <Button type="submit" className="h-11 w-full text-base" disabled={totalLoading}>
+          {totalLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Iniciar sesión
+        </Button>
+      </form>
+      <p className="mt-6 text-sm text-muted-foreground">
+        ¿Aún no tienes cuenta?{" "}
+        <Link href="/signup" className="font-medium text-primary underline-offset-4 hover:underline">
+          Crear cuenta
+        </Link>
+      </p>
+    </div>
   );
 }
