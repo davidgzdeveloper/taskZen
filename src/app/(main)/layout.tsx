@@ -18,6 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   LayoutDashboard,
   Columns3,
+  MessageCircle,
   Timer,
   Settings,
   Loader2,
@@ -30,6 +31,7 @@ const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Panel" },
   { href: "/board", icon: Columns3, label: "Tablero" },
   { href: "/timer", icon: Timer, label: "Temporizador" },
+  { href: "/assistant", icon: MessageCircle, label: "Asistente" },
   { href: "/settings", icon: Settings, label: "Ajustes" },
 ];
 

@@ -12,6 +12,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useToast } from "@/hooks/use-toast";
 import { PomodoroPips } from "@/components/PomodoroPips";
 import { cn } from "@/lib/utils";
+import { notifySessionEnd, requestNotificationPermission, scheduleChime, unlockAudio } from "@/lib/alarm";
 
 const presets = [
   { work: 15, break: 3 },
@@ -34,11 +35,9 @@ export function PomodoroTimer() {
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('zen') === '1') setZen(true);
   }, []);
-  const alarmAudio = useRef<HTMLAudioElement | null>(null);
-
-  useEffect(() => {
-    alarmAudio.current = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3');
-  }, []);
+  /** When the running session ends (ms since epoch); null while paused. */
+  const endAtRef = useRef<number | null>(null);
+  const wantsNotifications = user?.preferences?.notifications ?? true;
 
   const tasks = useMemo(() => Object.values(board.tasks).filter(t => t.status !== 'done'), [board.tasks]) as Task[];
 
@@ -103,15 +102,47 @@ export function PomodoroTimer() {
     setTime(newTime);
   }, [sessionType, duration, user?.preferences?.pomodoroBreak]);
 
+  // Start/pause from a user gesture: that's when browsers allow audio and notification prompts.
+  const toggleTimer = useCallback(() => {
+    if (!isActive) {
+      unlockAudio();
+      if (wantsNotifications) requestNotificationPermission();
+    }
+    setIsActive(a => !a);
+  }, [isActive, wantsNotifications]);
+
+  // Remaining time is derived from a fixed end timestamp, so it stays exact
+  // even when a hidden tab throttles the interval.
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    if (isActive && time > 0) {
-      interval = setInterval(() => {
-        setTime(t => t - 1);
-      }, 1000);
-    } else if (isActive && time === 0) {
-      // Session finished
-      alarmAudio.current?.play();
+    if (!isActive) {
+      endAtRef.current = null;
+      return;
+    }
+    if (endAtRef.current === null) endAtRef.current = Date.now() + time * 1000;
+    const tick = () => {
+      if (endAtRef.current === null) return;
+      setTime(Math.max(0, Math.ceil((endAtRef.current - Date.now()) / 1000)));
+    };
+    const id = setInterval(tick, 250);
+    document.addEventListener('visibilitychange', tick);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', tick);
+    };
+    // `time` is only read to seed a new session; re-running on every tick would reset the end time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive, sessionType]);
+
+  // The chime is booked on the audio clock for the exact end of the session; pausing or resetting cancels it.
+  useEffect(() => {
+    if (!isActive || endAtRef.current === null) return;
+    return scheduleChime((endAtRef.current - Date.now()) / 1000, sessionType);
+  }, [isActive, sessionType]);
+
+  useEffect(() => {
+    if (isActive && time === 0) {
+      // Session finished. The chime was already scheduled; start the next session from scratch.
+      endAtRef.current = null;
 
       if (sessionType === 'work') {
         handlePomodoroCompletion();
@@ -119,7 +150,17 @@ export function PomodoroTimer() {
 
       const newSessionType = sessionType === 'work' ? 'break' : 'work';
       setSessionType(newSessionType);
-      
+
+      const taskTitle = selectedTaskId ? board.tasks[selectedTaskId]?.title : undefined;
+      if (wantsNotifications) {
+        notifySessionEnd(
+          newSessionType === 'break' ? 'Sesión de foco terminada' : 'Descanso terminado',
+          newSessionType === 'break'
+            ? `${taskTitle ? `+1 Pomodoro en "${taskTitle}". ` : ''}Toca descansar ${user?.preferences?.pomodoroBreak || 5} minutos.`
+            : 'Vuelve cuando quieras y pulsa Iniciar.'
+        );
+      }
+
       if (newSessionType === 'break') {
         // Automatically start the break
         const newDuration = user?.preferences?.pomodoroBreak || 5;
@@ -137,10 +178,8 @@ export function PomodoroTimer() {
         description: newSessionType === 'break' ? 'El descanso ya está en marcha.' : 'Pulsa Iniciar cuando quieras volver al foco.',
       });
     }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isActive, time, sessionType, duration, user?.preferences?.pomodoroBreak, toast, selectedTaskId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive, time]);
   
   useEffect(() => {
     resetTimer();
@@ -190,7 +229,7 @@ export function PomodoroTimer() {
       </div>
 
       <div className="mt-8 flex w-full max-w-sm flex-col gap-2 sm:flex-row">
-        <Button size="lg" onClick={() => setIsActive(!isActive)} className="h-12 flex-1 text-base">
+        <Button size="lg" onClick={toggleTimer} className="h-12 flex-1 text-base">
           {isActive ? <Pause className="mr-2 h-5 w-5" /> : <Play className="mr-2 h-5 w-5" />}
           {isActive ? 'Pausar' : 'Iniciar'}
         </Button>
@@ -217,7 +256,7 @@ export function PomodoroTimer() {
             isBreak={isBreak}
             progress={progress}
             task={selectedTask}
-            onToggle={() => setIsActive(a => !a)}
+            onToggle={toggleTimer}
             onExit={() => setZen(false)}
           />
         )}

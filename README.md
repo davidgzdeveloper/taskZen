@@ -105,8 +105,12 @@ MONGODB_URL="mongodb+srv://<usuario>:<password>@<cluster>.mongodb.net/taskzen?re
 # Secreto para firmar los JWT (genera uno con: openssl rand -base64 32)
 JWT_SECRET="cambia-esto-por-un-secreto-largo-y-aleatorio"
 
-# API key de Gemini para la priorización con IA
+# API key de Gemini (gratis en https://aistudio.google.com/apikey)
+# Se usa para la priorización con IA y para el asistente
 GEMINI_API_KEY="tu-api-key"
+
+# Opcional: modelo de Gemini (por defecto gemini-2.5-flash)
+# GEMINI_MODEL="gemini-2.5-flash-lite"
 ```
 
 ### 3. Preparar la base de datos

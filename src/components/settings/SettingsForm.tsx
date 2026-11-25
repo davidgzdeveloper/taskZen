@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { requestNotificationPermission } from "@/lib/alarm";
 
 export function SettingsForm() {
     const { user, updateUserPreferences } = useAuth();
@@ -121,13 +122,16 @@ export function SettingsForm() {
                             <div>
                                 <Label htmlFor="notifications">Avisos</Label>
                                 <p className="text-sm text-muted-foreground">
-                                    Recibe un aviso cuando termina una sesión.
+                                    Notificación del sistema al terminar una sesión si estás en otra pestaña o ventana.
                                 </p>
                             </div>
                             <Switch 
                                 id="notifications"
                                 checked={notifications}
-                                onCheckedChange={setNotifications}
+                                onCheckedChange={(checked) => {
+                                    setNotifications(checked);
+                                    if (checked) requestNotificationPermission();
+                                }}
                                 disabled={isLoading}
                             />
                         </div>
