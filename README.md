@@ -184,7 +184,7 @@ User ─────1:1───── UserPreferences
 
 ## Despliegue
 
-El repositorio incluye configuración para **Render** (`render.yaml`) y **Netlify** (`netlify.toml`). En cualquiera de ellos hay que definir `MONGODB_URL`, `JWT_SECRET` y `GEMINI_API_KEY` en el panel de variables de entorno.
+La aplicación (frontend y API) está desplegada en **Vercel**. Hay que definir `MONGODB_URL`, `JWT_SECRET` y `GEMINI_API_KEY` en las variables de entorno del proyecto, y permitir el acceso desde cualquier IP (`0.0.0.0/0`) en MongoDB Atlas, ya que Vercel no usa IPs fijas.
 
 ---
 
