@@ -1,4 +1,4 @@
-import {ai} from '@/ai/genkit';
+import {ai, withModelFallback} from '@/ai/genkit';
 import {z} from 'genkit';
 import type {WorkInsights} from '@/lib/insights';
 
@@ -58,15 +58,18 @@ export async function runAssistantChat(input: {
 }): Promise<AssistantReply> {
   const {messages, insights, openTaskTitles, userName} = input;
 
-  const {output} = await ai.generate({
-    system: systemPrompt(insights, openTaskTitles, userName),
-    messages: messages.map((m) => ({
-      role: m.role === 'assistant' ? ('model' as const) : ('user' as const),
-      content: [{text: m.content}],
-    })),
-    output: {schema: AssistantReplySchema},
-    config: {temperature: 0.4},
-  });
+  const {output} = await withModelFallback((model) =>
+    ai.generate({
+      model,
+      system: systemPrompt(insights, openTaskTitles, userName),
+      messages: messages.map((m) => ({
+        role: m.role === 'assistant' ? ('model' as const) : ('user' as const),
+        content: [{text: m.content}],
+      })),
+      output: {schema: AssistantReplySchema},
+      config: {temperature: 0.4},
+    })
+  );
 
   if (!output) throw new Error('Empty response from model');
   return output;

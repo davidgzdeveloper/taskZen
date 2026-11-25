@@ -109,8 +109,9 @@ JWT_SECRET="cambia-esto-por-un-secreto-largo-y-aleatorio"
 # Se usa para la priorización con IA y para el asistente
 GEMINI_API_KEY="tu-api-key"
 
-# Opcional: modelo de Gemini (por defecto gemini-2.5-flash)
-# GEMINI_MODEL="gemini-2.5-flash-lite"
+# Opcional: modelo de Gemini preferido. Si falla (retirado o saturado) se prueban
+# gemini-3.5-flash, gemini-flash-latest y gemini-flash-lite-latest
+# GEMINI_MODEL="gemini-3.8-flash"
 ```
 
 ### 3. Preparar la base de datos

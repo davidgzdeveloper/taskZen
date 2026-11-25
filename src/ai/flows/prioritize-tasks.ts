@@ -8,7 +8,7 @@
  * - PrioritizeTasksOutput - The return type for the prioritizeTasks function.
  */
 
-import {ai} from '@/ai/genkit';
+import {ai, withModelFallback} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const PrioritizeTasksInputSchema = z.object({
@@ -76,7 +76,7 @@ const prioritizeTasksFlow = ai.defineFlow(
     outputSchema: PrioritizeTasksOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
+    const {output} = await withModelFallback((model) => prompt(input, {model}));
     return output!;
   }
 );
