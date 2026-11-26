@@ -1,5 +1,6 @@
 import * as jose from 'jose';
 import bcrypt from 'bcryptjs';
+import { createHash, randomBytes } from 'crypto';
 import { prisma } from './prisma';
 import { User } from '@prisma/client';
 
@@ -154,4 +155,57 @@ export class AuthService {
       return null;
     }
   }
+
+  /**
+   * Creates a one-time reset token for `email`. Returns the raw token to email,
+   * or null when no account matches (callers must not reveal which).
+   * Only the token's SHA-256 is stored, so a database leak can't be used to reset passwords.
+   */
+  static async createPasswordResetToken(email: string): Promise<{ token: string; user: User } | null> {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return null;
+
+    // At most one email a minute per account
+    if (user.resetTokenExpires && user.resetTokenExpires.getTime() - RESET_TOKEN_TTL_MS + 60_000 > Date.now()) {
+      return null;
+    }
+
+    const token = randomBytes(32).toString('base64url');
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetTokenHash: sha256(token),
+        resetTokenExpires: new Date(Date.now() + RESET_TOKEN_TTL_MS),
+      },
+    });
+    return { token, user };
+  }
+
+  /** Sets a new password if `token` is valid and unexpired, then burns the token. */
+  static async resetPassword(token: string, newPassword: string): Promise<{ ok: true } | { error: string }> {
+    const user = await prisma.user.findFirst({ where: { resetTokenHash: sha256(token) } });
+    if (!user || !user.resetTokenExpires || user.resetTokenExpires.getTime() < Date.now()) {
+      return { error: 'El enlace no es válido o ha caducado. Pide uno nuevo.' };
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: await this.hashPassword(newPassword),
+        resetTokenHash: null,
+        resetTokenExpires: null,
+      },
+    });
+    return { ok: true };
+  }
+}
+
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
+
+const sha256 = (value: string) => createHash('sha256').update(value).digest('hex');
+
+/** The user as sent to the browser: never the password hash or reset token. */
+export function toPublicUser<T extends Partial<User>>(user: T) {
+  const { password, resetTokenHash, resetTokenExpires, ...publicUser } = user;
+  return publicUser;
 }

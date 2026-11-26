@@ -21,6 +21,11 @@ export function middleware(request: NextRequest) {
 
   const isAuthenticated = !!token;
 
+  // Password recovery works with or without a session (e.g. a reset link opened while logged in)
+  if (normalizedPathname === '/forgot-password' || normalizedPathname === '/reset-password') {
+    return NextResponse.next();
+  }
+
   // Define public paths
   const publicPaths = ['/', '/login', '/signup'];
   const isPublicPath = publicPaths.includes(normalizedPathname);

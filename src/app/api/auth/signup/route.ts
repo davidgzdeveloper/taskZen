@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { AuthService } from '@/lib/auth'
+import { AuthService, toPublicUser } from '@/lib/auth'
 
 // Force Node.js runtime for bcryptjs compatibility
 export const runtime = 'nodejs'
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      user: result.user,
+      user: toPublicUser(result.user),
       token: result.token,
       message: 'User created successfully'
     }, { status: 201 })
