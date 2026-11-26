@@ -3,202 +3,47 @@
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAppContext } from "@/hooks/useAppContext";
-import { useAuth } from "@/contexts/AuthContext";
+import { useTimer } from "@/contexts/TimerContext";
 import { Task } from "@/lib/types";
-import { Play, Pause, RotateCcw, Moon } from "lucide-react";
+import { Play, Pause, RotateCcw, Moon, Volume2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ZenMode } from "./ZenMode";
-import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useToast } from "@/hooks/use-toast";
+import React, { useState, useEffect, useMemo } from "react";
 import { PomodoroPips } from "@/components/PomodoroPips";
 import { cn } from "@/lib/utils";
-import { notifySessionEnd, requestNotificationPermission, scheduleChime, unlockAudio } from "@/lib/alarm";
 
-const presets = [
-  { work: 15, break: 3 },
-  { work: 25, break: 5 },
-  { work: 45, break: 10 },
-];
+const presets = [15, 25, 45];
 
+/** The timer page. The session itself lives in TimerContext so it survives navigation. */
 export function PomodoroTimer() {
-  const { board, user, updateTask: updateAppContextTask } = useAppContext();
-  const { session } = useAuth();
-  const { toast } = useToast();
-  const [sessionType, setSessionType] = useState<'work' | 'break'>('work');
-  const [duration, setDuration] = useState(user?.preferences?.pomodoroWork || 25);
-  const [time, setTime] = useState(duration * 60);
-  const [isActive, setIsActive] = useState(false);
-  const [selectedTaskId, setSelectedTaskId] = useState<string | undefined>();
+  const { board } = useAppContext();
+  const {
+    isBreak,
+    isActive,
+    formattedTime,
+    progress,
+    duration,
+    setDuration,
+    selectedTaskId,
+    setSelectedTaskId,
+    selectedTask,
+    toggle,
+    reset,
+    testChime,
+  } = useTimer();
   const [zen, setZen] = useState(false);
 
   // /timer?zen=1 opens straight into zen mode (linked from the dashboard).
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('zen') === '1') setZen(true);
+    if (new URLSearchParams(window.location.search).get("zen") === "1") setZen(true);
   }, []);
-  /** When the running session ends (ms since epoch); null while paused. */
-  const endAtRef = useRef<number | null>(null);
-  const wantsNotifications = user?.preferences?.notifications ?? true;
 
-  const tasks = useMemo(() => Object.values(board.tasks).filter(t => t.status !== 'done'), [board.tasks]) as Task[];
-
-  const handlePomodoroCompletion = async () => {
-    if (!selectedTaskId || !session) return;
-
-    const task = board.tasks[selectedTaskId];
-    if (!task) return;
-
-    const newCompletedPomodoros = (task.completedPomodoros || 0) + 1;
-
-    try {
-      // Update backend
-      const response = await fetch(`/api/tasks/${selectedTaskId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.token}`,
-        },
-        body: JSON.stringify({ completedPomodoros: newCompletedPomodoros }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update task on the server');
-      }
-
-      const updatedTask = await response.json();
-
-      // Update local context immediately
-      if (updateAppContextTask) {
-        updateAppContextTask(selectedTaskId, updatedTask);
-      }
-
-      toast({
-        title: "Pomodoro completado",
-        description: `Sumado a "${task.title}".`,
-      });
-
-    } catch (error) {
-      console.error("Failed to update task:", error);
-      toast({
-        title: "No se pudo guardar el Pomodoro",
-        description: "La sesión terminó, pero no se sumó a la tarea. Comprueba tu conexión.",
-        variant: "destructive",
-      });
-      // Optionally, revert the optimistic update in context
-      if (updateAppContextTask) {
-        updateAppContextTask(selectedTaskId, { completedPomodoros: task.completedPomodoros });
-      }
-    }
-  };
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-  };
-  
-  const resetTimer = useCallback(() => {
-    setIsActive(false);
-    const newTime = (sessionType === 'work' ? duration : user?.preferences?.pomodoroBreak || 5) * 60;
-    setTime(newTime);
-  }, [sessionType, duration, user?.preferences?.pomodoroBreak]);
-
-  // Start/pause from a user gesture: that's when browsers allow audio and notification prompts.
-  const toggleTimer = useCallback(() => {
-    if (!isActive) {
-      unlockAudio();
-      if (wantsNotifications) requestNotificationPermission();
-    }
-    setIsActive(a => !a);
-  }, [isActive, wantsNotifications]);
-
-  // Remaining time is derived from a fixed end timestamp, so it stays exact
-  // even when a hidden tab throttles the interval.
-  useEffect(() => {
-    if (!isActive) {
-      endAtRef.current = null;
-      return;
-    }
-    if (endAtRef.current === null) endAtRef.current = Date.now() + time * 1000;
-    const tick = () => {
-      if (endAtRef.current === null) return;
-      setTime(Math.max(0, Math.ceil((endAtRef.current - Date.now()) / 1000)));
-    };
-    const id = setInterval(tick, 250);
-    document.addEventListener('visibilitychange', tick);
-    return () => {
-      clearInterval(id);
-      document.removeEventListener('visibilitychange', tick);
-    };
-    // `time` is only read to seed a new session; re-running on every tick would reset the end time.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isActive, sessionType]);
-
-  // The chime is booked on the audio clock for the exact end of the session; pausing or resetting cancels it.
-  useEffect(() => {
-    if (!isActive || endAtRef.current === null) return;
-    return scheduleChime((endAtRef.current - Date.now()) / 1000, sessionType);
-  }, [isActive, sessionType]);
-
-  useEffect(() => {
-    if (isActive && time === 0) {
-      // Session finished. The chime was already scheduled; start the next session from scratch.
-      endAtRef.current = null;
-
-      if (sessionType === 'work') {
-        handlePomodoroCompletion();
-      }
-
-      const newSessionType = sessionType === 'work' ? 'break' : 'work';
-      setSessionType(newSessionType);
-
-      const taskTitle = selectedTaskId ? board.tasks[selectedTaskId]?.title : undefined;
-      if (wantsNotifications) {
-        notifySessionEnd(
-          newSessionType === 'break' ? 'Sesión de foco terminada' : 'Descanso terminado',
-          newSessionType === 'break'
-            ? `${taskTitle ? `+1 Pomodoro en "${taskTitle}". ` : ''}Toca descansar ${user?.preferences?.pomodoroBreak || 5} minutos.`
-            : 'Vuelve cuando quieras y pulsa Iniciar.'
-        );
-      }
-
-      if (newSessionType === 'break') {
-        // Automatically start the break
-        const newDuration = user?.preferences?.pomodoroBreak || 5;
-        setTime(newDuration * 60);
-        setIsActive(true); // Keep it active for the break
-      } else {
-        // Work session after a break, stop the timer
-        const newDuration = duration;
-        setTime(newDuration * 60);
-        setIsActive(false); // Stop the timer
-      }
-
-      toast({
-        title: newSessionType === 'break' ? 'Hora de descansar' : 'Descanso terminado',
-        description: newSessionType === 'break' ? 'El descanso ya está en marcha.' : 'Pulsa Iniciar cuando quieras volver al foco.',
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isActive, time]);
-  
-  useEffect(() => {
-    resetTimer();
-  }, [duration, resetTimer]);
-
-  const setPreset = (work: number, brk: number) => {
-    setDuration(work);
-    // This will trigger the useEffect to reset the timer
-  };
-
-  const sessionLength = (sessionType === 'work' ? duration : user?.preferences?.pomodoroBreak || 5) * 60;
-  const progress = ((sessionLength - time) / sessionLength) * 100;
-  const selectedTask = selectedTaskId ? board.tasks[selectedTaskId] : undefined;
-  const isBreak = sessionType === 'break';
+  const tasks = useMemo(() => Object.values(board.tasks).filter(t => t.status !== "done"), [board.tasks]) as Task[];
 
   return (
     <div className="mx-auto flex max-w-xl flex-col items-center py-6 text-center sm:py-10">
       <motion.p
-        key={sessionType}
+        key={isBreak ? "break" : "work"}
         initial={{ opacity: 0, y: -6 }}
         animate={{ opacity: 1, y: 0 }}
         className={cn("text-lg font-semibold", isBreak ? "text-done" : "text-muted-foreground")}
@@ -211,7 +56,7 @@ export function PomodoroTimer() {
         aria-live="off"
         className="numeral mt-2 text-[6.5rem] font-bold leading-none sm:text-[10rem]"
       >
-        {formatTime(time)}
+        {formattedTime}
       </p>
 
       <div
@@ -229,11 +74,11 @@ export function PomodoroTimer() {
       </div>
 
       <div className="mt-8 flex w-full max-w-sm flex-col gap-2 sm:flex-row">
-        <Button size="lg" onClick={toggleTimer} className="h-12 flex-1 text-base">
+        <Button size="lg" onClick={toggle} className="h-12 flex-1 text-base">
           {isActive ? <Pause className="mr-2 h-5 w-5" /> : <Play className="mr-2 h-5 w-5" />}
           {isActive ? 'Pausar' : 'Iniciar'}
         </Button>
-        <Button size="lg" variant="outline" onClick={resetTimer} className="h-12 text-base">
+        <Button size="lg" variant="outline" onClick={reset} className="h-12 text-base">
           <RotateCcw className="mr-2 h-4 w-4" />
           Reiniciar
         </Button>
@@ -251,12 +96,12 @@ export function PomodoroTimer() {
       <AnimatePresence>
         {zen && (
           <ZenMode
-            time={formatTime(time)}
+            time={formattedTime}
             isActive={isActive}
             isBreak={isBreak}
             progress={progress}
             task={selectedTask}
-            onToggle={toggleTimer}
+            onToggle={toggle}
             onExit={() => setZen(false)}
           />
         )}
@@ -296,25 +141,34 @@ export function PomodoroTimer() {
         <div className="space-y-2">
           <p id="preset-label" className="text-sm font-medium">Duración</p>
           <div role="radiogroup" aria-labelledby="preset-label" className="grid grid-cols-3 gap-1 rounded-lg bg-muted p-1">
-            {presets.map((preset) => (
+            {presets.map((minutes) => (
               <button
-                key={preset.work}
+                key={minutes}
                 type="button"
                 role="radio"
-                aria-checked={duration === preset.work}
-                onClick={() => setPreset(preset.work, preset.break)}
+                aria-checked={duration === minutes}
+                onClick={() => setDuration(minutes)}
                 className={cn(
                   "rounded-md px-2 py-2.5 transition-colors",
-                  duration === preset.work
+                  duration === minutes
                     ? "bg-card font-semibold text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <span className="digits text-base">{preset.work} min</span>
+                <span className="digits text-base">{minutes} min</span>
               </button>
             ))}
           </div>
         </div>
+
+        <button
+          type="button"
+          onClick={testChime}
+          className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <Volume2 className="h-4 w-4" />
+          Probar el sonido del aviso
+        </button>
       </div>
     </div>
   );

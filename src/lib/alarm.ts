@@ -14,11 +14,25 @@ export function unlockAudio() {
   if (typeof window === "undefined") return;
   try {
     ctx ??= new (window.AudioContext || (window as any).webkitAudioContext)();
-    if (ctx.state === "suspended") ctx.resume();
+    if (ctx.state !== "running") ctx.resume().catch(() => {});
+    // iOS/Safari only fully unlock after something is actually played inside the gesture.
+    const silent = ctx.createBufferSource();
+    silent.buffer = ctx.createBuffer(1, 1, 22050);
+    silent.connect(ctx.destination);
+    silent.start();
   } catch {
     ctx = null;
   }
 }
+
+export interface ScheduledChime {
+  /** Silences the chime if it hasn't started yet (pause, reset, leaving the page). */
+  cancel: () => void;
+  /** Whether the audio clock has reached the chime's start time. */
+  hasStarted: () => boolean;
+}
+
+const NOOP_CHIME: ScheduledChime = { cancel: () => {}, hasStarted: () => false };
 
 export type ChimeKind = "work" | "break";
 
@@ -29,12 +43,13 @@ const NOTES: Record<ChimeKind, number[]> = {
 };
 
 /**
- * Schedules the chime `delaySeconds` from now. Returns a cancel function
- * (for pause/reset). Does nothing if audio was never unlocked.
+ * Schedules the chime `delaySeconds` from now on the audio clock.
+ * Does nothing if audio was never unlocked.
  */
-export function scheduleChime(delaySeconds: number, kind: ChimeKind): () => void {
-  if (!ctx) return () => {};
+export function scheduleChime(delaySeconds: number, kind: ChimeKind): ScheduledChime {
+  if (!ctx) return NOOP_CHIME;
   const audio = ctx;
+  if (audio.state !== "running") audio.resume().catch(() => {});
   const master = audio.createGain();
   master.gain.value = 0.35;
   master.connect(audio.destination);
@@ -66,12 +81,18 @@ export function scheduleChime(delaySeconds: number, kind: ChimeKind): () => void
     overtone.stop(t + 1.7);
   });
 
-  // Cancel only a chime that hasn't started: when a session ends the timer moves on
-  // (and cleans up) while the chime is ringing, and that one must play out.
-  // Disconnecting silences pending notes without touching stopped nodes.
-  return () => {
-    if (audio.currentTime < start - 0.5) master.disconnect();
+  return {
+    // Disconnecting silences pending notes without touching stopped nodes.
+    cancel: () => {
+      if (audio.currentTime < start) master.disconnect();
+    },
+    hasStarted: () => audio.currentTime >= start,
   };
+}
+
+/** Plays the chime right away (session end detected, or the "test" button). */
+export function playChimeNow(kind: ChimeKind) {
+  scheduleChime(0, kind);
 }
 
 /** Ask once, from a user gesture, so notifications can be shown later. */
