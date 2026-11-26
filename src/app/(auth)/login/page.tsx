@@ -73,7 +73,12 @@ export default function LoginPage() {
           />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="password">Contraseña</Label>
+          <div className="flex items-baseline justify-between gap-2">
+            <Label htmlFor="password">Contraseña</Label>
+            <Link href="/forgot-password" className="text-sm text-primary underline-offset-4 hover:underline">
+              ¿La olvidaste?
+            </Link>
+          </div>
           <Input id="password" type="password" autoComplete="current-password" required
             value={password}
             onChange={(e) => setPassword(e.target.value)}

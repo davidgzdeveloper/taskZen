@@ -112,6 +112,20 @@ GEMINI_API_KEY="tu-api-key"
 # Opcional: modelo de Gemini preferido. Si falla (retirado o saturado) se prueban
 # gemini-3.5-flash, gemini-flash-latest y gemini-flash-lite-latest
 # GEMINI_MODEL="gemini-3.8-flash"
+
+# Correo para recuperar la contraseña (SMTP). Con Gmail: activa la verificación
+# en dos pasos y crea una contraseña de aplicación en
+# https://myaccount.google.com/apppasswords
+# En local, si no se configura, el enlace se imprime en la consola del servidor.
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT="465"
+SMTP_USER="tu-correo@gmail.com"
+SMTP_PASS="contraseña-de-aplicación-de-16-letras"
+# MAIL_FROM="TaskZen <tu-correo@gmail.com>"
+
+# URL pública para los enlaces de los correos. En Vercel no hace falta:
+# se usa el dominio de producción del proyecto automáticamente.
+# APP_URL="https://task02zen.vercel.app"
 ```
 
 ### 3. Preparar la base de datos
